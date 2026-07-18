@@ -123,6 +123,9 @@ function menu(clinicName: string): BotReply {
 }
 
 const TYPE_OPTIONS = ["Primera consulta", "Seguimiento", HUMAN_OPTION];
+
+/** Se ofrecen desde el menú y desde RESCHED_FIND: una sola definición. */
+const RESCHED_OPTIONS = ["Sí, cambiarla", "No, dejarla igual", HUMAN_OPTION];
 const TYPE_VALUES: AppointmentType[] = ["FIRST_TIME", "FOLLOW_UP"];
 
 const DAY_OPTIONS = ["Hoy", "Mañana", "Esta semana", "Elegir otra fecha", HUMAN_OPTION];
@@ -369,7 +372,7 @@ export async function handleMessage(
             replies: [
               {
                 text: `Encontré esta cita:\n\n${fullDate(appt.startTime)} a las ${fullTime(appt.startTime)}\n${appt.doctor.fullName}\n\n¿Deseas cambiarla?`,
-                options,
+                options: RESCHED_OPTIONS,
               },
             ],
             state: { step: "RESCHED_FIND", ctx },
@@ -537,7 +540,7 @@ export async function handleMessage(
 
       // --------------------------------------------------------- REAGENDAR
       case "RESCHED_FIND": {
-        const options = ["Sí, cambiarla", "No, dejarla igual", HUMAN_OPTION];
+        const options = RESCHED_OPTIONS;
         const choice = pick(text, options);
         if (choice === null) {
           // Puede haber escrito el folio.
