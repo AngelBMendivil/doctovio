@@ -17,28 +17,41 @@ export async function getOrganizationSettings(organizationId: string) {
   return db.organizationSettings.findUnique({ where: { organizationId } });
 }
 
-export async function updateOrganizationSettings(
-  organizationId: string,
-  data: Partial<{
-    timezone: string;
-    currency: string;
-    language: string;
-    defaultAppointmentMin: number;
-    toleranceMinutes: number;
-    appointmentTypesJson: unknown;
-    consultationTypesJson: unknown;
-    specialtiesJson: unknown;
-    officeHoursJson: unknown;
-    privacyNoticeHtml: string;
-    whatsappEnabled: boolean;
-    basePriceMxn: number | null;
-    basePriceUsd: number | null;
-  }>
-) {
+/**
+ * Configuración general del consultorio.
+ *
+ * Los campos JSON van tipados como `Prisma.InputJsonValue` y no como `unknown`:
+ * con `unknown` no cuadraban con Prisma y se habían tapado con `as never`, lo
+ * cual además rompía el build (no se puede esparcir un `never`).
+ */
+export type OrganizationSettingsInput = Partial<{
+  timezone: string;
+  currency: string;
+  language: string;
+  defaultAppointmentMin: number;
+  toleranceMinutes: number;
+  appointmentTypesJson: Prisma.InputJsonValue;
+  consultationTypesJson: Prisma.InputJsonValue;
+  specialtiesJson: Prisma.InputJsonValue;
+  officeHoursJson: Prisma.InputJsonValue;
+  privacyNoticeHtml: string;
+  whatsappEnabled: boolean;
+  basePriceMxn: number | null;
+  basePriceUsd: number | null;
+  slotGranularityMin: number;
+  bufferMinutes: number;
+  minLeadMinutes: number;
+  maxAdvanceDays: number;
+  cancelMinHours: number;
+  holdMinutes: number;
+  reminderHoursBefore: number[];
+}>;
+
+export async function updateOrganizationSettings(organizationId: string, data: OrganizationSettingsInput) {
   return db.organizationSettings.upsert({
     where: { organizationId },
-    update: data as never,
-    create: { organizationId, ...(data as never) },
+    update: data,
+    create: { organizationId, ...data },
   });
 }
 
