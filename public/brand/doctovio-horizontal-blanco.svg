@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" fill="none" role="img" aria-label="Doctovio — Gestión médica que fluye">
+  <!--
+    APROXIMACIÓN TEMPORAL — versión para fondos oscuros (barra lateral navy).
+    Reemplaza por la variante oficial con el texto en blanco.
+  -->
+  <defs>
+    <linearGradient id="dGradW" x1="8" y1="58" x2="58" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="0.55" stop-color="#3BA9D6"/>
+      <stop offset="1" stop-color="#4E9FD8"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M20 9 H33 a23 23 0 0 1 0 46 H20 a1 1 0 0 1 -1 -1 V33"
+    stroke="url(#dGradW)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <circle cx="41" cy="18" r="3.5" fill="#14B8A6"/>
+  <text x="76" y="37" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="26" font-weight="700" fill="#FFFFFF" letter-spacing="-0.6">Doctovio</text>
+  <text x="77" y="51" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="8.5" font-weight="500" fill="#A6E7E1">Gestión médica que fluye.</text>
+</svg>

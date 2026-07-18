@@ -1,0 +1,26 @@
+# Dependencias y build
+node_modules
+.next
+dist
+*.tsbuildinfo
+
+# Secretos. NUNCA subir: traen el token de WhatsApp, la clave secreta de la
+# app, la URL de la base y AUTH_SECRET (con el que se cifran los refresh
+# tokens de Google Calendar).
+.env
+.env.local
+.env.production
+
+# Plantillas de terceros usadas solo como referencia visual. Pesan ~100 MB y
+# tienen licencia propia: no forman parte de este producto.
+Velonic_v6.0.0
+admin-starter-kit
+
+# Logs y basura del sistema
+*.log
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode
+.idea

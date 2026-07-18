@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   DOCTOVIO — Sistema visual
+   "Gestión médica que fluye"
+
+   Paleta oficial:
+     Navy      #0D2B45  títulos, navegación, alta jerarquía
+     Azul      #1464A4  botones principales, enlaces, activos, gráficas
+     Turquesa  #14B8A6  acentos, estados positivos, indicadores médicos
+     Aqua      #A6E7E1  fondos suaves, tarjetas informativas, etiquetas
+     Fondo     #F2F6F9  lienzo general y superficies secundarias
+     Gris      #6B7280  texto secundario, iconos, datos de menor jerarquía
+     Blanco    #FFFFFF  tarjetas, formularios, modales
+
+   Todo color vive aquí. Los componentes usan tokens (bg-primary, text-accent…),
+   nunca hex directo: repintar la marca = cambiar solo este bloque.
+   =========================================================================== */
+:root {
+  /* --- Marca en hex: para SVG inline y referencia --- */
+  --doctovio-navy: #0D2B45;
+  --doctovio-blue: #1464A4;
+  --doctovio-teal: #14B8A6;
+  --doctovio-teal-light: #A6E7E1;
+  --doctovio-background: #F2F6F9;
+  --doctovio-gray: #6B7280;
+  --doctovio-white: #FFFFFF;
+
+  /* --- Tokens semánticos (HSL sin envolver, los consume Tailwind) --- */
+  --background: 205 36% 96%;        /* #F2F6F9 lienzo de la app */
+  --foreground: 208 68% 16%;        /* #0D2B45 texto principal */
+
+  --card: 0 0% 100%;                /* tarjetas, formularios, modales */
+  --card-foreground: 208 68% 16%;
+
+  --primary: 207 78% 36%;           /* #1464A4 acción principal */
+  --primary-foreground: 0 0% 100%;
+
+  --accent: 173 80% 40%;            /* #14B8A6 positivo / acento médico */
+  --accent-foreground: 0 0% 100%;
+  --accent-soft: 174 58% 78%;       /* #A6E7E1 fondos suaves y etiquetas */
+
+  --navy: 208 68% 16%;              /* #0D2B45 navegación y jerarquía alta */
+  --navy-foreground: 0 0% 100%;
+
+  --muted: 205 36% 96%;             /* #F2F6F9 superficies secundarias y hovers */
+  --muted-foreground: 220 9% 46%;   /* #6B7280 texto secundario */
+
+  --destructive: 0 72% 51%;         /* rojo: solo eliminar / cancelar */
+  --destructive-foreground: 0 0% 100%;
+
+  --warning: 38 92% 50%;            /* ámbar suave: pendientes */
+  --success: 173 80% 40%;           /* turquesa: confirmado */
+
+  --border: 207 30% 92%;            /* #E3EAF0 */
+  --ring: 207 78% 36%;              /* foco = azul principal */
+}
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Jerarquía tipográfica: títulos en navy, peso 600. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: hsl(var(--navy));
+    font-weight: 600;
+    letter-spacing: -0.011em;
+  }
+
+  /* El foco siempre se ve, pero solo al navegar con teclado. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Barra de desplazamiento discreta, acorde al lienzo. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.4);
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  /* Curvas abstractas inspiradas en el isotipo: login y estados vacíos. */
+  .doctovio-flow {
+    background-image:
+      radial-gradient(60rem 30rem at 110% -10%, hsl(var(--accent) / 0.13), transparent 60%),
+      radial-gradient(50rem 28rem at -10% 110%, hsl(var(--primary) / 0.12), transparent 60%);
+  }
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 14mm;
+  }
+  body {
+    background: #ffffff;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}

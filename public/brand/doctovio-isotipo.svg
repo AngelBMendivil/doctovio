@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Doctovio">
+  <!--
+    APROXIMACIÓN TEMPORAL del isotipo — reemplaza este archivo por el oficial.
+    Conserva el nombre y el viewBox cuadrado; la app lo toma solo.
+  -->
+  <defs>
+    <linearGradient id="dGrad" x1="8" y1="58" x2="58" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="0.55" stop-color="#1B8FB8"/>
+      <stop offset="1" stop-color="#1464A4"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M20 9 H33 a23 23 0 0 1 0 46 H20 a1 1 0 0 1 -1 -1 V33"
+    stroke="url(#dGrad)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <circle cx="41" cy="18" r="3.5" fill="#14B8A6"/>
+</svg>

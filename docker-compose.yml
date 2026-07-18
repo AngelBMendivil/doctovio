@@ -1,0 +1,25 @@
+# PostgreSQL para desarrollo local del MVP de pacientes.
+# Uso:  docker compose up -d      (levantar)
+#       docker compose down       (detener, conserva datos)
+#       docker compose down -v     (detener y BORRAR datos)
+services:
+  db:
+    image: postgres:15
+    container_name: mvp-pacientes-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mvp
+      POSTGRES_PASSWORD: mvp
+      POSTGRES_DB: mvp_pacientes
+    ports:
+      - "5432:5432"
+    volumes:
+      - mvp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mvp -d mvp_pacientes"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mvp_pgdata:
