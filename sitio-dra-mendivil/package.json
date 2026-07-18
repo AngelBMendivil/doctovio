@@ -1,0 +1,9 @@
+{
+  "name": "sitio-dra-mendivil",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sitio web de la Dra. Trini Estela Mendivil Morales",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

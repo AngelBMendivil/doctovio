@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dra. Trini Estela Mendívil Morales — Médica Cirujana | Tijuana, B.C.</title>
+<meta name="description" content="Médica cirujana titulada por la Universidad Autónoma de Guadalajara con 42 años de práctica en Tijuana. Consulta de medicina general para adultos y familias. Cédula profesional 887394.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D2B45;
+  --azul:#1464A4;
+  --teal:#14B8A6;
+  --aqua:#A6E7E1;
+  --fondo:#F2F6F9;
+  --gris:#6B7280;
+  --blanco:#FFFFFF;
+  --borde:#E3EAF0;
+  --radio:16px;
+  --sombra:0 1px 2px rgba(13,43,69,.04), 0 8px 24px rgba(13,43,69,.06);
+  --sombra-alta:0 2px 4px rgba(13,43,69,.06), 0 16px 40px rgba(13,43,69,.10);
+  --ancho:1140px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:17px;line-height:1.65;color:var(--navy);background:var(--blanco);
+  -webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%}
+a{color:var(--azul);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:3px solid var(--teal);outline-offset:3px;border-radius:6px}
+.wrap{max-width:var(--ancho);margin:0 auto;padding:0 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Nota de mockup ---------- */
+.nota-mockup{
+  background:#FEF3C7;border-bottom:1px solid #FCD34D;color:#78350F;
+  font-size:13.5px;padding:10px 24px;text-align:center;line-height:1.5;
+}
+.nota-mockup strong{font-weight:700}
+
+/* ---------- Header ---------- */
+header{
+  position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--borde);
+}
+.nav{display:flex;align-items:center;justify-content:space-between;height:76px;gap:24px}
+.marca{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.marca .logo,.marca img,.marca .logo-fb{width:46px;height:46px;border-radius:50%;flex-shrink:0}
+.marca .logo-fb{background:var(--navy)}
+.pie-marca .logo{width:46px;height:46px;flex-shrink:0}
+.marca-txt{display:flex;flex-direction:column;line-height:1.2}
+.marca-txt b{font-size:15.5px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.marca-txt span{font-size:12px;color:var(--gris);font-weight:500;letter-spacing:.02em}
+.menu{display:flex;gap:30px;align-items:center}
+.menu a{color:var(--navy);font-weight:500;font-size:15.5px;text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
+.menu a:hover{border-bottom-color:var(--teal);text-decoration:none}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:13px 24px;border-radius:12px;font-weight:600;font-size:15.5px;
+  border:1.5px solid transparent;cursor:pointer;transition:.18s;text-decoration:none;
+  white-space:nowrap;
+}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primario{background:var(--azul);color:#fff;box-shadow:0 4px 14px rgba(20,100,164,.28)}
+.btn-primario:hover{background:#115A93;box-shadow:0 6px 20px rgba(20,100,164,.36)}
+.btn-wa{background:#25D366;color:#fff;box-shadow:0 4px 14px rgba(37,211,102,.3)}
+.btn-wa:hover{background:#1DB954}
+.btn-fantasma{background:transparent;color:var(--navy);border-color:var(--borde)}
+.btn-fantasma:hover{border-color:var(--azul);color:var(--azul);background:var(--fondo)}
+.menu-movil{display:none;background:none;border:none;padding:8px;cursor:pointer;color:var(--navy)}
+
+/* ---------- Hero ---------- */
+.hero{background:linear-gradient(168deg,var(--fondo) 0%,#E8F1F7 100%);padding:72px 0 84px;position:relative;overflow:hidden}
+.hero::before{
+  content:"";position:absolute;top:-140px;right:-140px;width:460px;height:460px;
+  background:radial-gradient(circle,rgba(166,231,225,.5) 0%,transparent 68%);border-radius:50%;
+}
+.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:64px;align-items:center;position:relative}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;background:rgba(20,184,166,.12);
+  color:#0F766E;font-size:13.5px;font-weight:600;padding:7px 14px;border-radius:999px;
+  margin-bottom:22px;letter-spacing:.01em;
+}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--teal);display:block}
+.hero h1{
+  font-size:clamp(1.85rem,3.4vw,2.7rem);line-height:1.18;font-weight:800;
+  letter-spacing:-.025em;margin-bottom:22px;
+}
+.hero h1 em{font-style:normal;color:var(--azul)}
+.hero-sub{font-size:19px;color:#3A5570;line-height:1.62;margin-bottom:34px;max-width:34em}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:34px}
+.hero-nota{font-size:14px;color:var(--gris);display:flex;align-items:center;gap:8px}
+
+/* Marco de la foto */
+.foto-marco{position:relative;justify-self:center;width:100%;max-width:420px}
+.foto-marco::after{
+  content:"";position:absolute;inset:auto -18px -18px auto;width:72%;height:72%;
+  background:var(--aqua);border-radius:var(--radio);z-index:0;
+}
+.foto{
+  position:relative;z-index:1;border-radius:var(--radio);overflow:hidden;
+  box-shadow:var(--sombra-alta);background:var(--fondo);
+  aspect-ratio:3/4;
+}
+.foto img{width:100%;height:100%;object-fit:cover;object-position:center}
+.foto-ph{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:28px;text-align:center;background:#FEF3C7;border:2px dashed #F59E0B;
+  border-radius:var(--radio);color:#78350F;
+}
+.foto-ph b{font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.foto-ph span{font-size:13.5px;line-height:1.55}
+.foto-cred{
+  position:absolute;z-index:2;left:-16px;bottom:26px;background:#fff;border-radius:12px;
+  box-shadow:var(--sombra-alta);padding:13px 17px;display:flex;align-items:center;gap:11px;
+}
+.foto-cred .ico{width:34px;height:34px;border-radius:9px;background:var(--fondo);display:grid;place-items:center;color:var(--azul);flex-shrink:0}
+.foto-cred b{display:block;font-size:14px;font-weight:700;line-height:1.3}
+.foto-cred span{display:block;font-size:12px;color:var(--gris)}
+
+/* ---------- Confianza ---------- */
+.confianza{border-bottom:1px solid var(--borde);background:#fff;padding:0}
+.confianza-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.dato{padding:34px 24px;text-align:center;border-right:1px solid var(--borde)}
+.dato:last-child{border-right:none}
+.dato b{display:block;font-size:30px;font-weight:800;color:var(--azul);letter-spacing:-.02em;line-height:1.15}
+.dato span{display:block;font-size:14px;color:var(--gris);margin-top:5px;font-weight:500}
+
+/* ---------- Secciones ---------- */
+section{padding:88px 0}
+.sec-alt{background:var(--fondo)}
+.sec-head{max-width:38em;margin-bottom:48px}
+.sec-head.centro{margin-left:auto;margin-right:auto;text-align:center}
+.kicker{font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:block}
+h2{font-size:clamp(1.75rem,3.1vw,2.35rem);font-weight:800;letter-spacing:-.025em;line-height:1.2;margin-bottom:16px}
+.sec-head p{font-size:17.5px;color:#3A5570;line-height:1.65}
+
+/* Sobre mí */
+.sobre-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:60px;align-items:start}
+.sobre-foto{border-radius:var(--radio);overflow:hidden;box-shadow:var(--sombra);aspect-ratio:4/5;background:var(--fondo)}
+.sobre-foto img{width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.sobre-txt p{font-size:17.5px;color:#33506B;line-height:1.75;margin-bottom:20px}
+.sobre-txt p:first-child{font-size:20px;color:var(--navy);font-weight:500;line-height:1.6}
+.cita-personal{font-size:22px!important;font-weight:600;color:var(--azul)!important;font-style:italic;margin-top:26px!important;line-height:1.4}
+.firma{margin-top:30px;padding-top:26px;border-top:1px solid var(--borde)}
+.firma b{display:block;font-size:17px;font-weight:700}
+.firma span{display:block;font-size:14.5px;color:var(--gris);margin-top:3px}
+
+/* Servicios */
+.agendar-bloque{margin-top:76px;padding-top:64px;border-top:1px solid var(--borde)}
+.servicios-intro{display:grid;grid-template-columns:1.4fr 1fr;gap:48px;align-items:center;margin-bottom:48px}
+.intro-foto{border-radius:var(--radio);overflow:hidden;box-shadow:var(--sombra);aspect-ratio:4/5;background:#fff}
+.intro-foto img{width:100%;height:100%;object-fit:cover;object-position:center 28%}
+.servicios{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.tarjeta{
+  background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:32px;
+  transition:.2s;display:flex;flex-direction:column;
+}
+.tarjeta:hover{box-shadow:var(--sombra-alta);transform:translateY(-3px);border-color:#CFE0EC}
+.tarjeta .ico{
+  width:50px;height:50px;border-radius:13px;background:var(--fondo);
+  display:grid;place-items:center;color:var(--azul);margin-bottom:20px;
+}
+.tarjeta h3{font-size:19.5px;font-weight:700;margin-bottom:11px;letter-spacing:-.015em}
+.tarjeta p{font-size:15.5px;color:var(--gris);line-height:1.65;margin-bottom:18px}
+.lista{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:20px}
+.tarjeta .tag{margin-top:auto}
+.lista li{font-size:15px;color:#33506B;display:flex;gap:9px;align-items:flex-start;line-height:1.5}
+.lista li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:8px}
+.tag{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  padding:6px 11px;border-radius:7px;line-height:1.3;
+}
+.tag-ok{background:rgba(20,184,166,.11);color:#0F766E}
+.tag-info{background:rgba(20,100,164,.09);color:var(--azul)}
+.tag-alerta{background:#FEF3C7;color:#92400E}
+
+/* Trayectoria */
+.linea{position:relative;padding-left:34px;max-width:56em}
+.linea::before{content:"";position:absolute;left:7px;top:9px;bottom:9px;width:2px;background:linear-gradient(var(--aqua),var(--borde))}
+.hito{position:relative;padding-bottom:34px}
+.hito:last-child{padding-bottom:0}
+.hito::before{
+  content:"";position:absolute;left:-34px;top:7px;width:16px;height:16px;border-radius:50%;
+  background:#fff;border:3px solid var(--teal);box-shadow:0 0 0 4px rgba(166,231,225,.35);
+}
+.hito b{display:block;font-size:13.5px;font-weight:700;color:var(--azul);letter-spacing:.04em;margin-bottom:5px}
+.hito h4{font-size:17.5px;font-weight:700;margin-bottom:5px;letter-spacing:-.01em}
+.hito p{font-size:15.5px;color:var(--gris);line-height:1.6}
+.hueco{
+  background:#FEF3C7;border:1px dashed #F59E0B;border-radius:11px;padding:16px 18px;
+  color:#78350F;font-size:14.5px;line-height:1.6;
+}
+
+/* Agendar */
+.pasos{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:40px}
+.paso{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:30px;position:relative}
+.paso b.num{
+  position:absolute;top:-15px;left:30px;width:34px;height:34px;border-radius:50%;
+  background:var(--azul);color:#fff;display:grid;place-items:center;font-size:15px;font-weight:700;
+  box-shadow:0 4px 12px rgba(20,100,164,.3);
+}
+.paso h4{font-size:17.5px;font-weight:700;margin:12px 0 9px}
+.paso p{font-size:15.5px;color:var(--gris);line-height:1.65}
+.cta-caja{
+  background:var(--navy);border-radius:20px;padding:48px;color:#fff;
+  display:flex;align-items:center;justify-content:space-between;gap:36px;flex-wrap:wrap;
+}
+.cta-caja h3{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:9px;color:#fff}
+.cta-caja p{color:#B8CDDE;font-size:16.5px;line-height:1.6;max-width:32em}
+.cta-btns{display:flex;gap:13px;flex-wrap:wrap}
+.cta-caja .btn-fantasma{color:#fff;border-color:rgba(255,255,255,.28)}
+.cta-caja .btn-fantasma:hover{background:rgba(255,255,255,.09);border-color:#fff;color:#fff}
+
+/* Opiniones */
+.opiniones-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.reseñas{display:flex;flex-direction:column;gap:18px}
+.reseña{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:26px}
+.reseña .estrellas-est{color:#F5A524;font-size:18px;letter-spacing:2px;margin-bottom:10px}
+.reseña p{font-size:15.5px;color:#33506B;line-height:1.65}
+.reseña-vacia{text-align:center;color:var(--gris);border-style:dashed}
+.reseña-vacia .estrellas-est{opacity:.35}
+.form-opinion{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:32px;box-shadow:var(--sombra)}
+.form-opinion h3{font-size:20px;font-weight:700;margin-bottom:20px}
+.campo{margin-bottom:18px}
+.campo label{display:block;font-size:14.5px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.campo input[type=text],.campo textarea{
+  width:100%;border:1.5px solid var(--borde);border-radius:11px;padding:12px 14px;
+  font-family:inherit;font-size:15.5px;color:var(--navy);background:var(--fondo);transition:.15s;resize:vertical;
+}
+.campo input[type=text]:focus,.campo textarea:focus{outline:none;border-color:var(--azul);background:#fff}
+/* Rating con estrellas (orden inverso para hover/checked hacia la izquierda) */
+.rating{display:inline-flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px}
+.rating input{position:absolute;opacity:0;width:0;height:0}
+.rating label{font-size:30px;color:#D8E0E8;cursor:pointer;transition:.12s;line-height:1}
+.rating input:checked ~ label,
+.rating label:hover,
+.rating label:hover ~ label{color:#F5A524}
+.rating input:focus-visible + label{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+.form-nota{font-size:13px;color:var(--gris);margin-top:14px;line-height:1.55}
+
+/* FAQ */
+.faq{max-width:52em;margin:0 auto}
+details{background:#fff;border:1px solid var(--borde);border-radius:12px;margin-bottom:12px;overflow:hidden}
+details[open]{border-color:#CFE0EC;box-shadow:var(--sombra)}
+summary{
+  padding:20px 24px;font-weight:600;font-size:16.5px;cursor:pointer;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:22px;font-weight:400;color:var(--azul);flex-shrink:0;transition:.2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 24px 22px;font-size:16px;color:#33506B;line-height:1.7}
+
+/* Contacto */
+.contacto-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.dato-fila{display:flex;gap:15px;padding:19px 0;border-bottom:1px solid var(--borde);align-items:flex-start}
+.dato-fila:last-child{border-bottom:none}
+.dato-fila .ico{width:40px;height:40px;border-radius:11px;background:var(--fondo);display:grid;place-items:center;color:var(--azul);flex-shrink:0}
+.dato-fila b{display:block;font-size:15.5px;font-weight:700;margin-bottom:2px}
+.dato-fila span{display:block;font-size:15px;color:var(--gris);line-height:1.6}
+.mapa{
+  border-radius:var(--radio);background:var(--fondo);border:1px solid var(--borde);
+  min-height:340px;overflow:hidden;
+}
+.mapa iframe{display:block}
+.dato-fila a{color:var(--azul)}
+
+/* Footer */
+footer.pie{background:var(--navy);color:#B8CDDE;padding:60px 0 32px;font-size:14.5px}
+.pie-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:48px;padding-bottom:38px;border-bottom:1px solid rgba(255,255,255,.1)}
+.pie-marca{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.pie-marca img,.pie-marca .logo-fb{width:42px;height:42px;border-radius:50%;background:#fff;padding:3px}
+.pie-marca b{color:#fff;font-size:16px;font-weight:700;display:block;line-height:1.3}
+.pie-marca span{font-size:12.5px;color:#8FA9BF}
+.pie p{line-height:1.7;max-width:32em}
+.pie h5{color:#fff;font-size:14px;font-weight:700;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase}
+.pie ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+.pie a{color:#B8CDDE;text-decoration:none}
+.pie a:hover{color:#fff;text-decoration:underline}
+.aviso{
+  background:rgba(255,255,255,.05);border-left:3px solid var(--teal);border-radius:8px;
+  padding:16px 20px;margin:30px 0;font-size:14px;line-height:1.65;color:#CBDCE9;
+}
+.aviso b{color:#fff}
+.pie-abajo{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13.5px;color:#8FA9BF;padding-top:26px}
+.cedulas{display:flex;gap:22px;flex-wrap:wrap}
+
+/* Barra móvil */
+.barra-movil{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;
+  border-top:1px solid var(--borde);padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+  box-shadow:0 -4px 18px rgba(13,43,69,.09);
+}
+.barra-movil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.barra-movil a{
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;
+  border-radius:10px;font-size:11.5px;font-weight:600;color:var(--navy);text-decoration:none;
+}
+.barra-movil a.destacado{background:#25D366;color:#fff}
+.barra-movil a.agenda{background:var(--azul);color:#fff}
+
+/* ---------- Responsive ---------- */
+@media (max-width:960px){
+  .hero-grid{grid-template-columns:1fr;gap:48px}
+  .foto-marco{max-width:340px;order:-1}
+  .foto-cred{left:auto;right:-10px}
+  .sobre-grid{grid-template-columns:1fr;gap:36px}
+  .sobre-foto{max-width:340px}
+  .confianza-grid{grid-template-columns:repeat(2,1fr)}
+  .dato{border-bottom:1px solid var(--borde)}
+  .dato:nth-child(2n){border-right:none}
+  .servicios,.pasos,.testimonios,.opiniones-grid{grid-template-columns:1fr}
+  .servicios-intro{grid-template-columns:1fr;gap:28px}
+  .intro-foto{max-width:420px;order:-1}
+  .contacto-grid{grid-template-columns:1fr;gap:32px}
+  .pie-grid{grid-template-columns:1fr;gap:34px}
+  .menu{display:none}
+  .nav .btn{display:none}
+  .menu-movil{display:block}
+  body{padding-bottom:78px}
+  .barra-movil{display:block}
+  section{padding:64px 0}
+  .cta-caja{padding:34px;flex-direction:column;align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .btn:hover,.tarjeta:hover{transform:none}
+}
+@media print{
+  header,.barra-movil,.nota-mockup,.hero-btns,.cta-btns{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header>
+  <div class="wrap nav">
+    <a class="marca" href="#inicio" aria-label="Inicio">
+      <svg class="logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Dra. Mendívil">
+        <path d="M60 14 A46 46 0 0 0 60 106 Z" fill="#0D2B45"/>
+        <path d="M60 14 A46 46 0 0 1 106 60" fill="none" stroke="#0D2B45" stroke-width="4.5"/>
+        <path d="M106 60 A46 46 0 0 1 60 106" fill="none" stroke="#0D2B45" stroke-width="4.5" stroke-dasharray="2 10" stroke-linecap="round"/>
+        <line x1="60" y1="8" x2="60" y2="112" stroke="#0D2B45" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M60 28 C75 32 75 46 60 50 C45 54 45 68 60 72 C73 76 67 88 60 98" fill="none" stroke="#0D2B45" stroke-width="9" stroke-linecap="round"/>
+        <path d="M60 28 C75 32 75 46 60 50 C45 54 45 68 60 72 C73 76 67 88 60 98" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+      </svg>
+      <span class="marca-txt">
+        <b>Dra. Trini E. Mendívil</b>
+        <span>MÉDICA CIRUJANA · TIJUANA</span>
+      </span>
+    </a>
+    <nav class="menu" aria-label="Principal">
+      <a href="#sobre">Sobre mí</a>
+      <a href="#servicios">Consulta</a>
+      <a href="#agendar">Agendar</a>
+      <a href="#agendar">Cómo agendar</a>
+      <a href="#contacto">Contacto</a>
+      <a href="#testimonios">Opiniones</a>
+    </nav>
+    <a class="btn btn-primario" href="#agendar">Agendar consulta</a>
+    <button class="menu-movil" aria-label="Abrir menú">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<main id="inicio">
+<section class="hero" style="padding-top:72px">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="chip"><i></i>Consulta privada en Tijuana, B.C.</span>
+      <h1>Más de 42 años cuidando la salud de familias enteras, en muchos casos a lo largo de <em>tres generaciones</em>.</h1>
+      <p class="hero-sub">
+        Ofrezco consultas de medicina general con el tiempo y la atención que cada paciente
+        necesita: escucharte, comprender lo que te sucede y explicarte con claridad, en
+        palabras sencillas y cercanas.
+      </p>
+      <div class="hero-btns">
+        <a class="btn btn-wa" href="https://wa.me/526646486605?text=Hola%2C%20quiero%20agendar%20una%20consulta" target="_blank" rel="noopener">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-1.7-.9-2.9-1.6-4-3.6-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5s-.7-1.6-.9-2.2c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.2-.3-.2-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3c-.9-1.4-1.3-3-1.3-4.6C3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z"/></svg>
+          Escribir por WhatsApp
+        </a>
+        <a class="btn btn-fantasma" href="tel:+526646486605">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+          Llamar al consultorio
+        </a>
+      </div>
+      <p class="hero-nota">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal)"><path d="M20 6 9 17l-5-5"/></svg>
+        Cédula profesional 887394 · Registro Estatal B.C. 7323-02/95
+      </p>
+    </div>
+
+    <div class="foto-marco">
+      <div class="foto">
+        <img src="img/hero.png" alt="Retrato de la Dra. Trini Estela Mendívil Morales en bata blanca"
+             onerror="this.parentElement.innerHTML='&lt;div class=\'foto-ph\'&gt;&lt;b&gt;Falta img/hero.png&lt;/b&gt;&lt;span&gt;Guarda aquí la foto de pie con bata blanca y estetoscopio.&lt;/span&gt;&lt;/div&gt;'">
+      </div>
+      <div class="foto-cred">
+        <span class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        </span>
+        <span>
+          <b>Titulada por la UAG</b>
+          <span>Universidad Autónoma de Guadalajara</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONFIANZA ================= -->
+<section class="confianza" style="padding:0">
+  <div class="wrap">
+    <div class="confianza-grid">
+      <div class="dato"><b>42</b><span>Años de práctica clínica</span></div>
+      <div class="dato"><b>UAG</b><span>Médica Cirujana</span></div>
+      <div class="dato"><b>887394</b><span>Cédula profesional federal</span></div>
+      <div class="dato"><b>B.C.</b><span>Registro estatal desde 1995</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SOBRE MÍ ================= -->
+<section id="sobre">
+  <div class="wrap">
+    <div class="sobre-grid">
+      <div class="sobre-foto">
+        <img src="img/retrato.png" alt="La Dra. Mendívil sonriendo en su consultorio"
+             onerror="this.parentElement.innerHTML='&lt;div class=\'foto-ph\'&gt;&lt;b&gt;Falta img/retrato.png&lt;/b&gt;&lt;span&gt;Guarda aquí la foto sentada, sonriendo de frente.&lt;/span&gt;&lt;/div&gt;'">
+      </div>
+      <div class="sobre-txt">
+        <span class="kicker">Sobre mí</span>
+        <h2>Más de 40 años cuidando la salud de las familias</h2>
+        <p>
+          Soy egresada de la Universidad Autónoma de Guadalajara y cuento con más de
+          cuatro décadas de experiencia ejerciendo la medicina en Baja California.
+        </p>
+        <p>
+          A lo largo de mi trayectoria he atendido a pacientes de distintas aseguradoras
+          nacionales y estadounidenses, acompañando a miles de familias con una atención
+          humana, honesta y comprometida.
+        </p>
+        <p>
+          Mi prioridad es escuchar, orientar y ayudar a cada paciente con franqueza,
+          dedicación y respeto, siempre hasta donde la medicina y mi experiencia lo permitan.
+        </p>
+        <p>
+          Sin dejar de lado mi pasión por la medicina general, desde hace varios años
+          también me he desarrollado en el área de la medicina estética, ampliando las
+          opciones de atención para mis pacientes.
+        </p>
+        <p class="cita-personal">“Estoy aquí para ayudarte.”</p>
+        <div class="firma">
+          <b>Dra. Trini Estela Mendívil Morales</b>
+          <span>Médica Cirujana · Cédula profesional 887394</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SERVICIOS ================= -->
+<section id="servicios" class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head centro">
+      <span class="kicker">La consulta</span>
+      <h2>Qué se atiende aquí</h2>
+      <p>
+        Consulta de medicina general. Cuando un caso necesita a un especialista,
+        se refiere con quien corresponde: reconocer el límite propio también es parte del trabajo.
+      </p>
+    </div>
+    <div class="servicios">
+
+      <div class="tarjeta">
+        <span class="ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+        <h3>Medicina general</h3>
+        <p>El motivo por el que la mayoría de la gente llega. Consulta completa, sin reloj encima.</p>
+        <ul class="lista">
+          <li>Enfermedades agudas: gripe, infecciones, dolor</li>
+          <li>Control de hipertensión y diabetes</li>
+          <li>Chequeos y revisión de estudios de laboratorio</li>
+          <li>Recetas, referencias y certificados médicos</li>
+        </ul>
+        <span class="tag tag-ok">Consulta principal</span>
+      </div>
+
+      <div class="tarjeta">
+        <span class="ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.5 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
+        </span>
+        <h3>Acompañamiento continuo</h3>
+        <p>Para quien vive con una enfermedad crónica y necesita a alguien que lleve el hilo de su historia.</p>
+        <ul class="lista">
+          <li>Seguimiento de padecimientos crónicos</li>
+          <li>Ajuste y revisión de medicamentos</li>
+          <li>Coordinación con especialistas</li>
+          <li>Expediente que se conserva entre consultas</li>
+        </ul>
+        <span class="tag tag-info">Pacientes de años</span>
+      </div>
+
+      <div class="tarjeta">
+        <span class="ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+        </span>
+        <h3>Procedimientos estéticos</h3>
+        <p>Con formación específica desde 2004. Se realizan solo tras valoración y explicando qué se puede esperar y qué no.</p>
+        <ul class="lista">
+          <li>Toxina botulínica (formación Allergan, 2004)</li>
+          <li>Rellenos y volúmenes faciales (2018)</li>
+          <li>Hilos de sustentación PDO (2018)</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ---- Cómo agendar (protagonista) ---- -->
+    <div id="agendar" class="agendar-bloque">
+      <div class="sec-head centro" style="margin-bottom:40px">
+        <span class="kicker">Cómo agendar tu cita</span>
+        <h2>Agendar es tan fácil como mandar un mensaje</h2>
+        <p>Sin formularios ni cuentas: escribes por WhatsApp y en minutos tienes tu cita apartada.</p>
+      </div>
+      <div class="pasos">
+        <div class="paso">
+          <b class="num">1</b>
+          <h4>Escribes por WhatsApp</h4>
+          <p>Al número del consultorio. Basta con decir que quieres una cita y cuál es el motivo, a grandes rasgos.</p>
+        </div>
+        <div class="paso">
+          <b class="num">2</b>
+          <h4>Te proponen horarios</h4>
+          <p>Se te ofrecen los espacios disponibles. Eliges el que te acomode y la cita queda apartada al momento.</p>
+        </div>
+        <div class="paso">
+          <b class="num">3</b>
+          <h4>Recibes tu recordatorio</h4>
+          <p>Un mensaje antes de la cita, con fecha, hora y dirección. Si necesitas moverla, se responde ahí mismo.</p>
+        </div>
+      </div>
+
+      <div class="cta-caja">
+        <div>
+          <h3>¿Agendamos?</h3>
+          <p>WhatsApp es la vía más rápida. Si prefieres hablar con una persona, marca directo al consultorio.</p>
+        </div>
+        <div class="cta-btns">
+          <a class="btn btn-wa" href="https://wa.me/526646486605?text=Hola%2C%20quiero%20agendar%20una%20consulta" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+          <a class="btn btn-fantasma" href="tel:+526646486605">Llamar: 664 648 6605</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ================= FAQ ================= -->
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head centro">
+      <span class="kicker">Preguntas frecuentes</span>
+      <h2>Antes de tu primera consulta</h2>
+    </div>
+    <div class="faq">
+      <details open>
+        <summary>¿Cuánto cuesta la consulta?</summary>
+        <p>Escríbenos por WhatsApp y con gusto te confirmamos el costo de la consulta antes de que agendes, sin compromiso.</p>
+      </details>
+      <details>
+        <summary>¿Qué horarios maneja?</summary>
+        <p>La agenda se maneja por WhatsApp: al escribir te ofrecemos los espacios disponibles de la semana para que elijas el que mejor te acomode.</p>
+      </details>
+      <details>
+        <summary>¿Atiende niños?</summary>
+        <p>Atiendo a adultos y a familias. Si tu consulta es para un niño, escríbenos por WhatsApp contando la edad y el motivo, y te confirmamos si es el lugar indicado o te orientamos con quién acudir.</p>
+      </details>
+      <details>
+        <summary>¿Recibe seguros médicos?</summary>
+        <p>Escríbenos por WhatsApp con el nombre de tu aseguradora y te confirmamos si podemos atenderte por esa vía o cómo se maneja el reembolso.</p>
+      </details>
+      <details>
+        <summary>¿Qué llevo a mi primera consulta?</summary>
+        <p>Una identificación, la lista de los medicamentos que estés tomando (o las cajas) y los estudios recientes que tengas, aunque sean de hace tiempo. Si no traes nada, igual se te atiende.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACTO ================= -->
+<section id="contacto">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Contacto</span>
+      <h2>Dónde encontrarme</h2>
+    </div>
+    <div class="contacto-grid">
+      <div>
+        <div class="dato-fila">
+          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span><b>Consultorio</b><span>José Clemente Orozco #2468-302, Zona Río, Tijuana, B.C.</span></span>
+        </div>
+        <div class="dato-fila">
+          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span>
+          <span><b>Teléfono</b><span><a href="tel:+526646486605">664 648 6605</a></span></span>
+        </div>
+        <div class="dato-fila">
+          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 6 8-6"/></svg></span>
+          <span><b>Correo</b><span><a href="mailto:dratrinimendivil@gmail.com">dratrinimendivil@gmail.com</a></span></span>
+        </div>
+      </div>
+      <div class="mapa">
+        <iframe
+          title="Ubicación del consultorio"
+          src="https://maps.google.com/maps?q=Jos%C3%A9%20Clemente%20Orozco%202468%2C%20Zona%20Rio%2C%20Tijuana%2C%20B.C.&z=16&output=embed"
+          width="100%" height="100%" style="border:0;min-height:340px;border-radius:var(--radio)"
+          loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ================= OPINIONES ================= -->
+<section id="testimonios">
+  <div class="wrap">
+    <div class="sec-head centro">
+      <span class="kicker">Opiniones de pacientes</span>
+      <h2>Comparte tu experiencia</h2>
+      <p>Si ya te has atendido con la doctora, tu opinión ayuda a otras familias a dar el paso.</p>
+    </div>
+
+    <div class="opiniones-grid">
+      <!-- Opiniones publicadas (se llenan con reseñas reales autorizadas) -->
+      <div class="reseñas">
+        <div class="reseña reseña-vacia">
+          <div class="estrellas-est" aria-hidden="true">★★★★★</div>
+          <p>Aún no hay opiniones publicadas. Sé la primera persona en compartir tu experiencia con el formulario de al lado.</p>
+        </div>
+      </div>
+
+      <!-- Formulario para dejar comentario + calificación -->
+      <form class="form-opinion" onsubmit="return false">
+        <h3>Deja tu opinión</h3>
+        <div class="campo">
+          <label>Tu calificación</label>
+          <div class="rating" role="radiogroup" aria-label="Calificación">
+            <input type="radio" id="e5" name="rating" value="5"><label for="e5" title="5 estrellas">★</label>
+            <input type="radio" id="e4" name="rating" value="4"><label for="e4" title="4 estrellas">★</label>
+            <input type="radio" id="e3" name="rating" value="3"><label for="e3" title="3 estrellas">★</label>
+            <input type="radio" id="e2" name="rating" value="2"><label for="e2" title="2 estrellas">★</label>
+            <input type="radio" id="e1" name="rating" value="1"><label for="e1" title="1 estrella">★</label>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="op-nombre">Tu nombre</label>
+          <input type="text" id="op-nombre" placeholder="Ej. María G.">
+        </div>
+        <div class="campo">
+          <label for="op-texto">Tu comentario</label>
+          <textarea id="op-texto" rows="4" placeholder="Cuéntanos cómo fue tu experiencia..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primario" style="width:100%">Enviar opinión</button>
+        <p class="form-nota">Las opiniones se revisan antes de publicarse. <strong>[PENDIENTE: conectar con Doctovio para guardar y moderar las reseñas.]</strong></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="pie">
+  <div class="wrap">
+    <div class="pie-grid">
+      <div>
+        <div class="pie-marca">
+          <svg class="logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo">
+            <rect width="120" height="120" rx="50%" fill="#fff"/>
+            <path d="M60 16 A44 44 0 0 0 60 104 Z" fill="#0D2B45"/>
+            <path d="M60 16 A44 44 0 0 1 104 60" fill="none" stroke="#0D2B45" stroke-width="4.5"/>
+            <path d="M104 60 A44 44 0 0 1 60 104" fill="none" stroke="#0D2B45" stroke-width="4.5" stroke-dasharray="2 10" stroke-linecap="round"/>
+            <line x1="60" y1="10" x2="60" y2="110" stroke="#0D2B45" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M60 29 C75 33 75 46 60 50 C45 54 45 67 60 71 C73 75 67 87 60 97" fill="none" stroke="#0D2B45" stroke-width="9" stroke-linecap="round"/>
+            <path d="M60 29 C75 33 75 46 60 50 C45 54 45 67 60 71 C73 75 67 87 60 97" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+          </svg>
+          <span>
+            <b>Dra. Trini Estela Mendívil Morales</b>
+            <span>Médica Cirujana · Tijuana, B.C.</span>
+          </span>
+        </div>
+        <p>
+          Consulta de medicina general para adultos y familias.
+          Médica cirujana titulada por la Universidad Autónoma de Guadalajara con 42 años de práctica clínica.
+        </p>
+        <div class="aviso">
+          <b>Esto no es un servicio de urgencias.</b> Si tienes dolor de pecho, dificultad para respirar,
+          pérdida de la conciencia o cualquier situación que ponga en riesgo la vida, llama al <b>911</b>
+          o acude al hospital más cercano. La información de este sitio es orientativa y no sustituye
+          una consulta médica.
+        </div>
+      </div>
+      <div>
+        <h5>Secciones</h5>
+        <ul>
+          <li><a href="#sobre">Sobre mí</a></li>
+          <li><a href="#servicios">La consulta</a></li>
+          <li><a href="#agendar">Cómo agendar</a></li>
+          <li><a href="#contacto">Contacto</a>
+      <a href="#testimonios">Opiniones</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Legal</h5>
+        <ul>
+          <li><a href="#">Aviso de privacidad</a></li>
+          <li><a href="#">Términos de uso</a></li>
+          <li><a href="#">Aviso COFEPRIS</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="pie-abajo">
+      <div class="cedulas">
+        <span>Cédula profesional 887394 (SEP)</span>
+        <span>Registro Estatal B.C. 7323-02/95</span>
+      </div>
+      <span>© 2026 · Agenda gestionada con Doctovio</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= BARRA MÓVIL ================= -->
+<nav class="barra-movil" aria-label="Acciones rápidas">
+  <div class="barra-movil-grid">
+    <a href="tel:+526646486605">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+      Llamar
+    </a>
+    <a class="destacado" href="https://wa.me/526646486605?text=Hola%2C%20quiero%20agendar%20una%20consulta" target="_blank" rel="noopener">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+      WhatsApp
+    </a>
+    <a class="agenda" href="#agendar">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     

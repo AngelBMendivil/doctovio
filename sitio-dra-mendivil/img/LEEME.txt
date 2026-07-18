@@ -1,0 +1,39 @@
+FOTOS DEL SITIO — qué guardar aquí y con qué nombre
+====================================================
+
+IMPORTANTE: las imágenes que mandas por el chat NO se guardan solas en esta
+carpeta. Hay que copiarlas a mano aquí, y los nombres tienen que ser EXACTOS,
+porque el HTML las busca por nombre.
+
+EL LOGO YA NO SE NECESITA COMO ARCHIVO.
+Está dibujado dentro del propio HTML (SVG), así que siempre se ve, en el
+encabezado y en el pie, sin depender de ningún archivo. Si algún día quieres
+usar el PNG original en su lugar, avísame y lo cambio.
+
+LAS TRES FOTOS PROFESIONALES (las nuevas, de bata blanca):
+
+  hero.jpg      La foto DE PIE, cuerpo hacia la cámara, bata blanca y
+                estetoscopio, con el pasillo de la clínica detrás.
+                Va en el encabezado principal (lo primero que se ve).
+                Proporción vertical 3:4. Mínimo 800x1067 px.
+
+  retrato.jpg   La foto SENTADA, sonriendo de frente, bata blanca sobre
+                pijama azul.
+                Va en la sección "Sobre mí".
+                Proporción vertical 4:5. Mínimo 800x1000 px.
+
+  consulta.jpg  La foto de PERFIL, trabajando en el escritorio con la
+                planta verde al fondo.
+                Va junto a "Qué se atiende aquí".
+                Proporción horizontal 5:4. Mínimo 1000x800 px.
+
+Formato: JPG, calidad 80-85. Peso ideal: menos de 300 KB cada una.
+
+Si falta un archivo, el sitio NO se rompe: sale un recuadro ámbar diciendo
+cuál falta y con qué foto llenarlo. Así puedes ir probando por partes.
+
+CÓMO GUARDARLAS (rápido)
+------------------------
+1. Abre esta carpeta img/ en el explorador de archivos.
+2. Guarda cada foto que mandaste con el nombre exacto de arriba.
+3. Abre index.html en el navegador (doble clic). Listo.
