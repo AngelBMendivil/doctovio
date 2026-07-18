@@ -5,11 +5,19 @@ import { jwtVerify } from "jose";
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "mvp_session";
 
 /**
- * Rutas sin sesión. Ojo con las integraciones: no se protegen con cookie
- * (quien llama es Meta, no un navegador), sino con la firma HMAC del propio
- * webhook. Ver src/app/api/integrations/whatsapp/webhook/route.ts
+ * Rutas sin sesión.
+ *
+ * Ojo: las dos últimas NO son públicas en el sentido de "cualquiera entra".
+ * Simplemente no se protegen con cookie, porque quien llama es una máquina y
+ * no un navegador:
+ *
+ *   /api/integrations  lo llama Meta  → se valida la firma HMAC del webhook
+ *   /api/cron          lo llama el cron → se valida el CRON_SECRET del header
+ *
+ * Si se dejan fuera de esta lista, el middleware las redirige al login y el
+ * que llama recibe un 307 que nunca sabe interpretar.
  */
-const PUBLIC_PATHS = ["/login", "/public", "/api/public", "/api/integrations"];
+const PUBLIC_PATHS = ["/login", "/public", "/api/public", "/api/integrations", "/api/cron"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/_next") || pathname === "/favicon.ico";
