@@ -42,7 +42,13 @@ export function isValidSignature(rawBody: string, header: string | null): boolea
   return timingSafeEqual(a, b);
 }
 
-/** El evento debe venir dirigido a NUESTRO número, no a otro de la misma app. */
+/**
+ * @deprecated Asume un solo número para toda la instalación, que es justo lo
+ * que rompe con varios consultorios. Usa `resolveRouteByInstance()` de
+ * `lib/whatsapp/routing.ts`: resuelve el número Y el consultorio dueño.
+ *
+ * Se conserva solo por compatibilidad; no agregar llamadas nuevas.
+ */
 export function isOurPhoneNumber(phoneNumberId?: string): boolean {
   return Boolean(phoneNumberId) && phoneNumberId === WHATSAPP_CONFIG.phoneNumberId;
 }

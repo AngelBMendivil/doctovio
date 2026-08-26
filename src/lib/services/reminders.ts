@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { sendTemplate, isWhatsAppConfigured, WhatsAppError } from "@/lib/whatsapp/client";
+import { credentialsForOrganization } from "@/lib/whatsapp/routing";
 import { INITIAL_STATE } from "@/lib/conversation/state";
 
 /**
@@ -142,13 +143,22 @@ async function sendOne(jobId: string): Promise<void> {
   }
 
   try {
-    const { externalId } = await sendTemplate(phone, TEMPLATE_NAME, TEMPLATE_LANG, [
-      appt.patient.firstName,
-      appt.doctor.fullName,
-      fullDate(appt.startTime),
-      fullTime(appt.startTime),
-      appt.folio ?? "—",
-    ]);
+    // El recordatorio sale del número del consultorio dueño de la cita.
+    const creds = await credentialsForOrganization(job.organizationId);
+
+    const { externalId } = await sendTemplate(
+      phone,
+      TEMPLATE_NAME,
+      TEMPLATE_LANG,
+      [
+        appt.patient.firstName,
+        appt.doctor.fullName,
+        fullDate(appt.startTime),
+        fullTime(appt.startTime),
+        appt.folio ?? "—",
+      ],
+      creds
+    );
 
     await db.reminderJob.update({
       where: { id: jobId },

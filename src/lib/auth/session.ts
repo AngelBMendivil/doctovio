@@ -1,7 +1,10 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import type { UserRoleName } from "@prisma/client";
+import { db } from "@/lib/db";
 
 export type SessionPayload = {
   userId: string;
@@ -9,6 +12,12 @@ export type SessionPayload = {
   role: UserRoleName;
   fullName: string;
   email: string;
+  /**
+   * NO viaja en el token: lo agrega requireSession() al revalidar contra la
+   * base. Si estuviera firmado en el JWT quedaría congelado 7 días y volvería
+   * a pasar lo que este campo existe para evitar.
+   */
+  clinicActive?: boolean;
 };
 
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "mvp_session";
@@ -53,11 +62,103 @@ export async function getSession(): Promise<SessionPayload | null> {
   }
 }
 
-/** Lanza si no hay sesión activa. Usar en Server Actions / Route Handlers. */
+/**
+ * Estado real de la cuenta, leído de la base.
+ *
+ * El JWT es autocontenido y vive 7 días: por sí solo NO se entera de que un
+ * consultorio fue suspendido ni de que un usuario fue dado de baja. Sin esta
+ * revalidación, suspender un consultorio no suspende absolutamente nada hasta
+ * que expire la cookie.
+ *
+ * `cache()` de React deduplica la consulta dentro del mismo request: una
+ * página que llame a requireSession() cinco veces hace UNA sola query.
+ */
+const loadAccountState = cache(async (userId: string) => {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      status: true,
+      isActive: true,
+      organizationId: true,
+      organization: { select: { isActive: true } },
+    },
+  });
+  if (!user) return null;
+
+  return {
+    userActive: user.isActive && user.status === "ACTIVE",
+    organizationId: user.organizationId,
+    clinicActive: user.organization.isActive,
+  };
+});
+
+/**
+ * Lanza si no hay sesión activa. Usar en Server Actions / Route Handlers.
+ *
+ * Ojo: aquí NO se llama a destroySession(). Muchos server components llaman a
+ * esta función durante el render, y Next prohíbe modificar cookies fuera de un
+ * Server Action o Route Handler: borrar la cookie aquí truena la página con un
+ * error que no dice nada. Se lanza y ya; el middleware manda al login.
+ */
 export async function requireSession(): Promise<SessionPayload> {
   const session = await getSession();
   if (!session) {
     throw new Error("UNAUTHENTICATED");
+  }
+
+  const state = await loadAccountState(session.userId);
+
+  // Usuario borrado, inactivo o suspendido.
+  if (!state || !state.userActive) {
+    throw new Error("UNAUTHENTICATED");
+  }
+
+  // El consultorio del token ya no es el del usuario: token viejo o manipulado.
+  if (state.organizationId !== session.organizationId) {
+    throw new Error("UNAUTHENTICATED");
+  }
+
+  // Consultorio suspendido: se corta la operación por completo, en un solo
+  // punto. Se redirige en vez de lanzar porque redirect() sí funciona tanto en
+  // server components como en server actions, y da un mensaje entendible en
+  // lugar de la pantalla de error de Next.
+  //
+  // Suspender NO borra nada: los datos siguen intactos y al reactivar el
+  // consultorio todo vuelve a funcionar sin ningún paso extra.
+  if (!state.clinicActive) {
+    redirect("/suspendido");
+  }
+
+  return { ...session, clinicActive: true };
+}
+
+/**
+ * Alias explícito de requireSession() para operaciones que ESCRIBEN.
+ *
+ * Hoy hace lo mismo (requireSession ya bloquea consultorios suspendidos), pero
+ * deja la intención escrita en el código y da un lugar donde endurecer después
+ * sin tocar los llamados.
+ */
+export async function requireActiveClinic(): Promise<SessionPayload> {
+  return requireSession();
+}
+
+/** ¿El consultorio de este usuario está suspendido? Para el layout. */
+export async function isClinicSuspended(userId: string): Promise<boolean> {
+  const state = await loadAccountState(userId);
+  return state ? !state.clinicActive : false;
+}
+
+/**
+ * Verifica que la sesión pueda tocar datos de ESE consultorio.
+ *
+ * Es la barrera para cualquier caso donde el id del consultorio no venga
+ * directo de la sesión.
+ */
+export async function requireClinicAccess(organizationId: string): Promise<SessionPayload> {
+  const session = await requireSession();
+  if (session.organizationId !== organizationId) {
+    throw new Error("FORBIDDEN");
   }
   return session;
 }

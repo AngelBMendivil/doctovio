@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { receiveMessage } from "@/lib/conversation/orchestrator";
-import { checkVerifyToken, isValidSignature, isOurPhoneNumber } from "@/lib/whatsapp/config";
+import { checkVerifyToken, isValidSignature } from "@/lib/whatsapp/config";
+import { resolveRouteByInstance } from "@/lib/whatsapp/routing";
 
 /**
  * WEBHOOK DE WHATSAPP — única puerta por la que entran los mensajes de Meta.
@@ -110,14 +111,18 @@ async function process_(body: WebhookBody) {
       const value = change.value;
       if (!value) continue;
 
+      // De QUÉ consultorio es este mensaje. Se resuelve por el número que lo
+      // recibió, nunca por el paciente: dos consultorios pueden compartir
+      // paciente y se pisarían el expediente.
       const phoneNumberId = value.metadata?.phone_number_id;
-      if (!isOurPhoneNumber(phoneNumberId)) {
-        console.warn("[whatsapp] evento para un numero no registrado:", phoneNumberId);
+      const route = await resolveRouteByInstance(phoneNumberId);
+      if (!route) {
+        // Número no dado de alta, conexión inactiva o consultorio suspendido.
+        // Se descarta: adivinar el consultorio mezcla datos clínicos.
+        console.warn("[whatsapp] evento sin consultorio resoluble:", phoneNumberId);
         continue;
       }
-
-      const organizationId = await resolveOrganization();
-      if (!organizationId) continue;
+      const organizationId = route.organizationId;
 
       // Mensajes entrantes del paciente.
       for (const msg of value.messages ?? []) {
@@ -137,7 +142,9 @@ async function process_(body: WebhookBody) {
       for (const status of value.statuses ?? []) {
         await db.conversationMessage
           .updateMany({
-            where: { externalId: status.id },
+            // El acuse se acota al consultorio dueño del número, no solo al
+            // id del mensaje: nadie confirma entregas de otro consultorio.
+            where: { externalId: status.id, session: { organizationId } },
             data: {
               deliveryStatus: status.status,
               errorText: status.errors?.[0]?.title ?? null,
@@ -149,12 +156,5 @@ async function process_(body: WebhookBody) {
   }
 }
 
-/**
- * Por ahora hay un solo número para toda la instalación. Cuando Doctovio sea
- * multiconsultorio, el phone_number_id se buscará en una tabla de números
- * por organización.
- */
-async function resolveOrganization(): Promise<string | null> {
-  const org = await db.organization.findFirst({ where: { isActive: true }, select: { id: true } });
-  return org?.id ?? null;
-}
+// El enrutamiento por consultorio vive en lib/whatsapp/routing.ts
+// (resolveRouteByInstance). Aquí ya no se resuelve nada a mano.

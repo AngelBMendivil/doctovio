@@ -398,6 +398,7 @@ model Organization {
   conversations      ConversationSession[]
   googleCalendars    GoogleCalendarConnection[]
   reminderJobs       ReminderJob[]
+  whatsappConnections WhatsappConnection[]
 
   @@map("organizations")
 }
@@ -1104,6 +1105,42 @@ model GoogleCalendarConnection {
 
   @@index([organizationId])
   @@map("google_calendar_connections")
+}
+
+/// Proveedor del canal de WhatsApp. META es la Cloud API oficial (la que usa
+/// Doctovio hoy). Se deja como String y no como enum para poder dar de alta un
+/// proveedor nuevo sin migración de base.
+/// Valores en uso: "META" | "GREEN_API".
+
+/// Número de WhatsApp de un consultorio.
+///
+/// ESTA TABLA ES LA QUE ENRUTA LOS MENSAJES ENTRANTES. El webhook recibe un
+/// `instanceId` (el `phone_number_id` en Meta) y de ahí saca a QUÉ consultorio
+/// pertenece el mensaje. Antes se resolvía con un `findFirst()` sobre
+/// organizations: con dos consultorios, TODOS los mensajes caían en el primero.
+///
+/// El `@@unique([provider, instanceId])` es lo que vuelve imposible que un
+/// mismo número resuelva a dos consultorios distintos.
+model WhatsappConnection {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  provider       String   @default("META")
+  /// phone_number_id en Meta; instance id en Green API.
+  instanceId     String   @map("instance_id")
+  /// Número visible, solo para mostrarlo en Configuración.
+  phoneNumber    String?  @map("phone_number")
+  /// Token de envío de ESTE número. Si viene null se usa el del entorno
+  /// (instalación de un solo consultorio, como hoy).
+  accessToken    String?  @map("access_token")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([provider, instanceId])
+  @@index([organizationId])
+  @@map("whatsapp_connections")
 }
 
 /// Estado de una conversación del asistente de agenda.

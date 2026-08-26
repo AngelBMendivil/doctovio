@@ -60,6 +60,18 @@ Rompe el bundler RSC. Por eso `lib/prescription-template.ts` y
 **Nada de `as never` para callar a TypeScript.** Ya nos explotó dos veces en
 producción. Si el tipo no cuadra, arregla el tipo.
 
+**Un mensaje entrante de WhatsApp se enruta por el NÚMERO que lo recibió,
+nunca por el paciente.** El orden es `instanceId → organizationId →
+(organizationId + phone) → paciente`. Si no resuelve, se descarta. Antes había
+un `organization.findFirst()` ahí: con dos consultorios, todos los mensajes de
+todos los pacientes caían en el primero. Ver `lib/whatsapp/routing.ts`. Jamás
+uses `findFirst()` sobre `organizations` para deducir el consultorio.
+
+**El JWT no se entera de nada.** Vive 7 días y es autocontenido: no sabe si el
+consultorio fue suspendido ni si el usuario fue dado de baja. Por eso
+`requireSession()` revalida contra la base. Si agregas otra puerta de entrada,
+tiene que revalidar también, o suspender no suspende nada.
+
 ---
 
 ## Arquitectura: lo que importa
@@ -136,13 +148,94 @@ o el middleware lo manda al login con un 307.
 ## Pendientes conocidos
 
 - **Cero pruebas automatizadas.** El riesgo real del proyecto.
-- **No es multiconsultorio.** `resolveOrganization` en el webhook hace
-  `findFirst`. Es una app de un consultorio con forma de SaaS.
+- **Multiconsultorio: a medias.** El aislamiento por `organizationId` ya está en
+  25 modelos y los 23 servicios lo exigen. El enrutamiento de WhatsApp y la
+  suspensión ya se arreglaron (25 ago 2026). Falta: `type`/`status`/`maxUsers`
+  en `Organization`, `SUPER_ADMIN`, `ClinicUser` (hoy un usuario pertenece a un
+  solo consultorio) y RLS. Ver `MULTITENANT.md`.
 - **Un paciente nuevo no puede agendar por WhatsApp** — escala a recepción.
 - **Verificación de negocio en Meta** pendiente: sin ella no hay número real.
 - **Credenciales por rotar:** token de WhatsApp, App Secret y contraseña de la
   base circularon por un chat.
 - Los expedientes creados antes del arreglo de `birthDate` tienen edad 0.
+
+---
+
+## Estado del proyecto (18 jul 2026)
+
+**Estrategia acordada.** La propuesta de valor de Doctovio es un paquete:
+sistema + sitio web del médico + asistente de IA en WhatsApp. Antes de construir
+la versión "plug and play" (multiconsultorio), se valida el modelo con una fase
+**friends and family** (3-5 consultorios conocidos; la Dra. Mendívil es el
+primer caso). Requisitos de higiene antes de meter usuarios reales: rotar
+credenciales y tener claro que hoy el `findFirst` solo aguanta un consultorio.
+
+**Sitio de la Dra. Mendívil — HECHO (v1).** Vive en `sitio-dra-mendivil/`.
+HTML estático de una sola página con la marca Doctovio. Sirve con `server.js`
+(Node puro, sin dependencias) + `package.json` + `railway.json`. Guía en
+`DESPLEGAR.md`.
+- Datos reales cargados: dirección (José Clemente Orozco #2468-302, Zona Río),
+  tel 664 648 6605, correo dratrinimendivil@gmail.com, mapa de Google embebido.
+- **UAG, no UNAM.** El usuario confirmó que es Universidad Autónoma de
+  Guadalajara. (Los documentos originales decían UNAM — falta que confirme
+  contra el título físico.)
+- Fotos profesionales en `img/` (hero, retrato, consulta), recortadas. Ojo:
+  se ven de estudio/IA; **la doctora debe aprobarlas como imagen fiel** antes de
+  publicar (publicidad médica).
+- **Nunca dice "especialista"** — cédula 887394 es de licenciatura. Riesgo
+  COFEPRIS. Todo es "médica cirujana con formación en".
+- Se quitó el segmento de Trayectoria a pedido del usuario.
+- **Formulario de opiniones (estrellas + comentario): se ve pero NO guarda
+  nada.** Falta conectarlo con Doctovio para almacenar y moderar reseñas.
+
+**Despliegue en Railway — EN PROCESO.** Servicio nuevo `pacific-hope` en el
+proyecto, conectado al repo `AngelBMendivil/doctovio`, branch `main`, con
+**Root Directory = `sitio-dra-mendivil`**. Para que el puerto cuadre: variable
+`PORT=8080` y el dominio apunta a 8080. Aún por confirmar deploy en verde y
+generar dominio. Railway ofrece comprar `dratrinimendivil.com` por ~$11 USD/año
+(aún no comprado). Plan: validar con la URL `.up.railway.app` gratis antes de
+comprar dominio.
+
+**WhatsApp / asistente de IA — parcial.**
+- Plantilla `recordatorio_cita`: **En revisión** en Meta (17 jul 2026). Solo
+  bloquea los RECORDATORIOS automáticos, NO el agendado. El bot agenda sin
+  plantilla dentro de la ventana de 24 h.
+- El bot vive en el **número de prueba de Meta**, no en el 664 real. El botón de
+  WhatsApp del sitio apunta al 664 → hoy el bot NO contestaría ahí. Para número
+  real: verificación de negocio + registrar número en la API (deja de ser
+  WhatsApp normal) + plantillas + `subscribed_apps`.
+- Se puede probar el flujo de agendar ya, en el número de prueba, con el
+  teléfono en la lista de permitidos.
+
+**Plantilla `recordatorio_cita`: APROBADA** (Meta la muestra como "Activa:
+calidad pendiente" el 18 jul 2026 — "activa" = aprobada, "calidad pendiente"
+solo es que aún no manda mensajes para medir calidad).
+
+**Visión del asistente — dos modos, un solo cerebro (distinguidos por número).**
+- **Asistente ↔ Paciente** (YA EXISTE): menús, agenda según reglas de negocio.
+- **Doctora ↔ Asistente** (POR CONSTRUIR): la doctora le escribe al MISMO bot y
+  entra en modo admin: ver citas de hoy/semana, reagendar, cancelar. El bot la
+  reconoce por su número (el 664) y le da un menú distinto al del paciente.
+  Las operaciones ya existen en `scheduling.ts` (`consultarAgenda`,
+  `reagendarCita`, `cancelarCita`, `confirmarAsistencia`); falta la capa de
+  conversación en modo doctora. Empezar con MENÚ numerado (no IA), agregar
+  lenguaje natural después.
+- Esto resuelve el número: el bot vive en un número dedicado nuevo; la doctora
+  conserva su 664 y desde ahí le habla al bot → el bot la trata como admin.
+
+**Número dedicado para el bot.** Usar un número aparte (no el 664 personal) para
+que la doctora conserve su WhatsApp normal. Puede ser chip/SIM nuevo, Twilio o
+fijo — solo debe poder recibir el código de verificación (SMS o llamada).
+IMPORTANTE: conectar por **Meta Cloud API directo** (lo que Doctovio ya usa),
+NO por el producto de WhatsApp de Twilio (eso obligaría a reescribir toda la
+integración). Twilio, si se usa, es solo el proveedor del número. Y el botón de
+WhatsApp del sitio debe apuntar al número del bot, no al 664.
+
+**Lo siguiente cuando se retome:** (1) confirmar deploy del sitio en verde y
+generar dominio; (2) confirmar qué aprobó Meta (¿verificación de negocio?) para
+salir del número de prueba; (3) elegir y registrar el número dedicado del bot;
+(4) construir el modo doctora (admin por WhatsApp); (5) decisiones de la
+doctora: foto aprobada, título UAG, si ofrece estética.
 
 ---
 

@@ -2,6 +2,9 @@ import { db } from "@/lib/db";
 import { handleMessage } from "./machine";
 import { INITIAL_STATE, type SessionState, type BotReply } from "./state";
 import { sendText, sendOptions, isWhatsAppConfigured, WhatsAppError } from "@/lib/whatsapp/client";
+// routing.ts es hoja (solo db + config): no entra en el ciclo
+// scheduling → reminders → orchestrator → machine → scheduling.
+import { credentialsForOrganization } from "@/lib/whatsapp/routing";
 import type { MessageChannel } from "@prisma/client";
 
 /**
@@ -142,9 +145,18 @@ export async function deliver(sessionId: string, channel: MessageChannel, phone:
   }
 
   try {
+    // El consultorio responde desde SU número, no desde uno global: de otro
+    // modo el paciente de un consultorio recibiría mensajes desde el número
+    // de otro.
+    const convo = await db.conversationSession.findUnique({
+      where: { id: sessionId },
+      select: { organizationId: true },
+    });
+    const creds = convo ? await credentialsForOrganization(convo.organizationId) : null;
+
     const { externalId } = reply.options?.length
-      ? await sendOptions(phone, reply.text, reply.options)
-      : await sendText(phone, reply.text);
+      ? await sendOptions(phone, reply.text, reply.options, creds)
+      : await sendText(phone, reply.text, creds);
 
     await db.conversationMessage.update({
       where: { id: message.id },
