@@ -161,6 +161,80 @@ o el middleware lo manda al login con un 307.
 
 ---
 
+## Estado del proyecto (25 ago 2026)
+
+**Lo que se hizo hoy: multiconsultorio, primera tanda.** Dos commits en `main`,
+ya desplegados: `7ef43c3` (aislamiento de WhatsApp + suspensión efectiva) y
+`f21896c` (alta de consultorios). Análisis completo en `MULTITENANT.md`.
+
+**Hallazgo que reencuadró todo:** Doctovio YA era multi-tenant. `organizationId`
+vive en 25 modelos y los 23 servicios lo exigen como primer parámetro. NO hacía
+falta agregar `clinic_id`: se decidió que `Organization` ES el consultorio y
+solo se le suman los campos que falten. Agregar un `clinic_id` en paralelo
+habría dejado dos conceptos de tenant compitiendo.
+
+**Tres `findFirst` de la misma familia, dos ya cerrados:**
+1. ~~Webhook de WhatsApp~~ — resuelto: enruta por `instanceId` vía
+   `whatsapp_connections`. Ver `lib/whatsapp/routing.ts`.
+2. ~~Login~~ — resuelto: correo único global + `findUnique`.
+3. **Cron de recordatorios — ABIERTO.** Ver abajo.
+
+**⚠️ COMANDO PENDIENTE.** La migración del correo único NO se aplicó todavía.
+Railway solo corre el build, no las migraciones:
+
+```powershell
+npx prisma migrate deploy
+```
+
+No rompe nada mientras haya un solo consultorio, pero **hay que correrlo antes
+de dar de alta el segundo**.
+
+**Cómo dar de alta un consultorio** (mientras no exista el panel):
+
+```powershell
+copy scripts\consultorio-ejemplo.json mi-consultorio.json
+npm run consultorio -- crear mi-consultorio.json
+npm run consultorio -- listar
+```
+
+Los JSON de alta llevan contraseñas en texto plano y están en `.gitignore`.
+
+---
+
+### Lo siguiente, en orden
+
+**1. 🔴 El cron de recordatorios ignora la suspensión.** `processDueReminders()`
+en `lib/services/reminders.ts` toma la cola global sin filtrar consultorio: una
+clínica suspendida **sigue mandando WhatsApp a sus pacientes cada 5 minutos**.
+Es el único agujero activo, y es hacia afuera. Segundo problema en la misma
+función: `take: 50` sobre la cola global ordenada por fecha — con 40
+consultorios, uno con cola larga se come todos los turnos y deja a los demás sin
+recordatorios. Hay que filtrar por `organization.isActive` y repartir por
+consultorio.
+
+**2. 🔴 Rotar credenciales.** Token de WhatsApp, App Secret y contraseña de la
+base circularon por un chat. Pendiente desde julio. Mientras sigan vivos, todo
+el blindaje tiene una puerta abierta por detrás. **Antes de meter consultorios
+de terceros.**
+
+**3. 🔴 Cero pruebas.** Se tocó webhook, login y aislamiento sin una sola
+prueba. La primera que vale la pena: dos consultorios con el mismo correo, que
+el alta lo rechace.
+
+**4. 🟡 Fase 1 restante:** `type` / `status` / `maxUsers` en `Organization`
+(hoy solo hay `isActive`), `SUPER_ADMIN` + panel `/admin`, índices compuestos
+(a 40 consultorios la agenda se va a sentir).
+
+**5. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
+Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la
+ignora y en Railway ese es justo el caso. Detalle en `MULTITENANT.md` §7.
+
+**Revisado y sano** (no volver a auditarlo): `google.ts`, `schedule.ts`,
+`machine.ts` y `preregistration.ts` acotan bien por `organizationId`. El
+directorio médico cruza consultorios A PROPÓSITO y solo expone datos públicos.
+
+---
+
 ## Estado del proyecto (18 jul 2026)
 
 **Estrategia acordada.** La propuesta de valor de Doctovio es un paquete:
