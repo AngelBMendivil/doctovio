@@ -24,3 +24,9 @@ Thumbs.db
 # Editores
 .vscode
 .idea
+
+# Altas de consultorio: llevan contrasenas en texto plano.
+# El unico que SI se versiona es scripts/consultorio-ejemplo.json (sin datos reales).
+/mi-consultorio.json
+/consultorio-*.json
+/*.consultorio.json

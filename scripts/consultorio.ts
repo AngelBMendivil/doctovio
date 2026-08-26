@@ -1,0 +1,133 @@
+/**
+ * Alta y administración de consultorios desde la terminal.
+ *
+ * Mientras no exista el panel de SUPER_ADMIN, esta es la puerta para dar de
+ * alta un consultorio nuevo. Usa el mismo `createClinic()` que usará el panel,
+ * así que lo que se pruebe aquí es lo que va a correr allá.
+ *
+ *   npm run consultorio -- listar
+ *   npm run consultorio -- crear consultorio-ejemplo.json
+ *   npm run consultorio -- suspender <id>
+ *   npm run consultorio -- activar <id>
+ *
+ * OJO: lee el DATABASE_URL del .env. Hoy ese .env apunta a PRODUCCIÓN, así que
+ * lo que hagas aquí le pasa a la base real. El comando `crear` te muestra lo
+ * que va a hacer y pide confirmación antes de escribir.
+ */
+
+import { readFileSync } from "fs";
+import { createInterface } from "readline";
+import { createClinic, listClinics, setClinicActive, type CreateClinicInput } from "../src/lib/services/clinics";
+import { db } from "../src/lib/db";
+
+function confirmar(pregunta: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(`${pregunta} (escribe "si" para continuar): `, (respuesta) => {
+      rl.close();
+      resolve(respuesta.trim().toLowerCase() === "si");
+    });
+  });
+}
+
+const hora = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+async function listar() {
+  const clinics = await listClinics();
+
+  if (clinics.length === 0) {
+    console.log("No hay consultorios.");
+    return;
+  }
+
+  console.log(`\n${clinics.length} consultorio(s):\n`);
+  for (const c of clinics) {
+    console.log(`  ${c.name}`);
+    console.log(`    id          ${c.id}`);
+    console.log(`    estado      ${c.isActive ? "activo" : "SUSPENDIDO"}`);
+    console.log(`    usuarios    ${c.users}   pacientes ${c.patients}   citas ${c.appointments}`);
+    console.log(`    whatsapp    ${c.whatsapp ? "conectado" : "sin número asignado"}`);
+    // Sin horario el motor de agenda no ofrece un solo espacio.
+    console.log(`    horario     ${c.hasSchedule ? "configurado" : "SIN HORARIO — no podrá agendar"}`);
+    console.log("");
+  }
+}
+
+async function crear(rutaJson: string) {
+  let input: CreateClinicInput;
+  try {
+    input = JSON.parse(readFileSync(rutaJson, "utf8"));
+  } catch (e) {
+    throw new Error(`No pude leer ${rutaJson}: ${e instanceof Error ? e.message : e}`);
+  }
+
+  if (!input.name || !input.admin?.email || !input.admin?.password) {
+    throw new Error("El archivo necesita al menos: name, admin.email y admin.password.");
+  }
+
+  const horarios = input.schedule;
+  console.log("\nSe va a crear:\n");
+  console.log(`  Consultorio   ${input.name}`);
+  console.log(`  Sucursal      ${input.branch?.name ?? "Consultorio principal"}`);
+  console.log(`  Admin         ${input.admin.fullName} <${input.admin.email}>`);
+  console.log(
+    `  Médico        ${input.doctor ? `${input.doctor.fullName} <${input.doctor.email}>` : "(el admin también será el médico)"}`
+  );
+  console.log(
+    `  Horario       ${
+      horarios ? horarios.map((s) => `d${s.weekday} ${hora(s.startMinute)}-${hora(s.endMinute)}`).join(", ") : "lun-vie 09:00-14:00 y 16:00-19:00 (por defecto)"
+    }`
+  );
+  console.log(`  WhatsApp      ${input.whatsapp ? input.whatsapp.instanceId : "sin número (el bot no contestará)"}`);
+  console.log(`\n  Base de datos: ${(process.env.DATABASE_URL ?? "").replace(/:\/\/[^@]*@/, "://***@")}\n`);
+
+  if (!(await confirmar("¿Creo este consultorio?"))) {
+    console.log("Cancelado. No se escribió nada.");
+    return;
+  }
+
+  const r = await createClinic(input);
+
+  console.log(`\nListo. Consultorio "${r.name}" creado.\n`);
+  console.log(`  id consultorio  ${r.organizationId}`);
+  console.log(`  entra con       ${r.adminEmail}`);
+  console.log(`  médico          ${r.doctorEmail}`);
+  console.log(`  horarios        ${r.scheduleRows} franjas`);
+  console.log(`  whatsapp        ${r.whatsapp ? "número asignado" : "SIN número — el bot no contestará"}`);
+  console.log("");
+}
+
+async function cambiarEstado(id: string, activo: boolean) {
+  const r = await setClinicActive(id, activo);
+  console.log(`"${r.name}" quedó ${r.isActive ? "ACTIVO" : "SUSPENDIDO"}.`);
+  if (!activo) {
+    console.log("No se borró nada: al reactivarlo todo vuelve tal como estaba.");
+  }
+}
+
+async function main() {
+  const [comando, arg] = process.argv.slice(2);
+
+  switch (comando) {
+    case "listar":
+      return listar();
+    case "crear":
+      if (!arg) throw new Error("Falta la ruta del archivo JSON.");
+      return crear(arg);
+    case "suspender":
+      if (!arg) throw new Error("Falta el id del consultorio.");
+      return cambiarEstado(arg, false);
+    case "activar":
+      if (!arg) throw new Error("Falta el id del consultorio.");
+      return cambiarEstado(arg, true);
+    default:
+      console.log("Comandos: listar | crear <archivo.json> | suspender <id> | activar <id>");
+  }
+}
+
+main()
+  .catch((e) => {
+    console.error(`\nError: ${e instanceof Error ? e.message : e}\n`);
+    process.exitCode = 1;
+  })
+  .finally(() => db.$disconnect());

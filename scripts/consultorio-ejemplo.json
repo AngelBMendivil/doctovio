@@ -1,0 +1,51 @@
+{
+  "name": "Consultorio Dr. Ejemplo",
+  "legalName": "Consultorio Dr. Ejemplo S.C.",
+
+  "branch": {
+    "name": "Consultorio principal",
+    "address": "Av. Siempre Viva 742, Piso 3",
+    "city": "Tijuana",
+    "state": "Baja California",
+    "phone": "6641234567"
+  },
+
+  "admin": {
+    "email": "admin@consultorio-ejemplo.com",
+    "password": "CAMBIA-ESTA-CONTRASENA",
+    "fullName": "Nombre del Administrador",
+    "phone": "6641234567"
+  },
+
+  "doctor": {
+    "email": "doctor@consultorio-ejemplo.com",
+    "password": "CAMBIA-ESTA-CONTRASENA",
+    "fullName": "Dr. Nombre Apellido",
+    "specialty": "Medicina General",
+    "licenseNumber": "1234567"
+  },
+
+  "_comentario_horario": "Minutos desde medianoche: 540 = 9:00, 840 = 14:00, 960 = 16:00, 1140 = 19:00. weekday: 0 = domingo, 6 = sabado. Si omites esta seccion queda lunes a viernes 9-14 y 16-19. SIN horario el consultorio no puede agendar nada.",
+  "schedule": [
+    { "weekday": 1, "startMinute": 540, "endMinute": 840 },
+    { "weekday": 1, "startMinute": 960, "endMinute": 1140 },
+    { "weekday": 2, "startMinute": 540, "endMinute": 840 },
+    { "weekday": 2, "startMinute": 960, "endMinute": 1140 },
+    { "weekday": 3, "startMinute": 540, "endMinute": 840 },
+    { "weekday": 3, "startMinute": 960, "endMinute": 1140 },
+    { "weekday": 4, "startMinute": 540, "endMinute": 840 },
+    { "weekday": 4, "startMinute": 960, "endMinute": 1140 },
+    { "weekday": 5, "startMinute": 540, "endMinute": 840 }
+  ],
+
+  "settings": {
+    "timezone": "America/Tijuana",
+    "defaultAppointmentMin": 30
+  },
+
+  "_comentario_whatsapp": "Quita esta seccion si el consultorio todavia no tiene numero propio. instanceId es el phone_number_id de Meta, NO el numero telefonico. Sin accessToken usa el token del entorno.",
+  "whatsapp": {
+    "instanceId": "PHONE_NUMBER_ID_DE_META",
+    "phoneNumber": "+52 664 123 4567"
+  }
+}

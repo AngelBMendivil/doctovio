@@ -503,6 +503,14 @@ model User {
   appointmentHolds      AppointmentHold[]
   googleCalendar        GoogleCalendarConnection?
 
+  /// El correo identifica a la PERSONA en toda la plataforma, no dentro de un
+  /// consultorio. Sin esta restricción, dos consultorios podían tener el mismo
+  /// correo y el login (que busca por correo, antes de saber el consultorio)
+  /// resolvía al primero que devolviera Postgres: o metía a alguien al
+  /// consultorio equivocado, o lo dejaba fuera del suyo con "credenciales
+  /// inválidas". Es también la forma correcta de llegar a ClinicUser: una
+  /// persona, un correo; a qué consultorios pertenece lo dice la tabla puente.
+  @@unique([email])
   @@unique([organizationId, email])
   @@index([organizationId])
   @@map("users")

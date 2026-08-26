@@ -122,10 +122,23 @@ export async function findUserByEmail(organizationId: string, email: string) {
   });
 }
 
-/** Busca un usuario por correo en TODAS las organizaciones (para el login,
- *  ya que el usuario aún no sabe a qué organización pertenece). */
+/**
+ * Busca un usuario por correo en TODA la plataforma. La usa el login, que aún
+ * no sabe a qué consultorio pertenece quien está entrando.
+ *
+ * Es `findUnique`, no `findFirst`: el correo es único a nivel plataforma
+ * (@@unique([email]) en el modelo User). Antes era un `findFirst` y con dos
+ * consultorios que compartieran correo devolvía uno al azar — Postgres no
+ * garantiza orden sin ORDER BY. Eso metía a la persona al consultorio
+ * equivocado o la dejaba fuera del suyo.
+ *
+ * El filtro de isActive se hace después, no en el where: si estuviera en el
+ * where, un usuario desactivado haría que la consulta no encuentre nada y el
+ * login diría "credenciales inválidas" en vez de "tu cuenta está inactiva".
+ */
 export async function findUserByEmailGlobal(email: string) {
-  return db.user.findFirst({
-    where: { email: email.toLowerCase().trim(), isActive: true },
+  const user = await db.user.findUnique({
+    where: { email: email.toLowerCase().trim() },
   });
+  return user;
 }
