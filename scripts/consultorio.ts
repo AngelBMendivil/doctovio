@@ -25,7 +25,36 @@ import {
   listPlatformAdmins,
   type CreateClinicInput,
 } from "../src/lib/services/clinics";
+import { resetUserPasswordGlobal } from "../src/lib/services/users";
 import { db } from "../src/lib/db";
+
+/**
+ * Pregunta algo sin mostrarlo en pantalla.
+ *
+ * Se usa para contraseñas: pasarlas como argumento del comando las dejaría en
+ * el historial de la terminal, donde sobreviven mucho más de lo que uno cree.
+ */
+function preguntarOculto(pregunta: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+
+    let silenciar = false;
+    // readline escribe cada tecla mediante este método; se intercepta para no
+    // hacer eco de lo que se teclea después del prompt.
+    (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = (s: string) => {
+      if (!silenciar) process.stdout.write(s);
+    };
+
+    rl.question(pregunta, (respuesta) => {
+      process.stdout.write("\n");
+      rl.close();
+      resolve(respuesta);
+    });
+
+    // Después de que el prompt ya se escribió.
+    silenciar = true;
+  });
+}
 
 function confirmar(pregunta: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -142,6 +171,23 @@ async function listarMaestros() {
   console.log("");
 }
 
+/**
+ * Restablece la contraseña de un usuario.
+ *
+ * Las contraseñas se guardan como hash bcrypt: son irrecuperables por diseño.
+ * Cuando alguien la olvida, el único camino es ponerle una nueva.
+ */
+async function contrasena(email: string) {
+  const nueva = await preguntarOculto(`Nueva contraseña para ${email}: `);
+  if (nueva.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+
+  const repetir = await preguntarOculto("Repítela: ");
+  if (nueva !== repetir) throw new Error("Las contraseñas no coinciden. No se cambió nada.");
+
+  const u = await resetUserPasswordGlobal(email, nueva);
+  console.log(`\nListo. ${u.fullName} <${u.email}> ya puede entrar con la contraseña nueva.`);
+}
+
 async function main() {
   const [comando, arg] = process.argv.slice(2);
 
@@ -165,6 +211,10 @@ async function main() {
       return maestro(arg, true);
     case "maestros":
       return listarMaestros();
+    case "contrasena":
+    case "contraseña":
+      if (!arg) throw new Error("Falta el correo del usuario.");
+      return contrasena(arg);
     default:
       console.log("Comandos:");
       console.log("  listar                      consultorios y su salud");
@@ -174,6 +224,7 @@ async function main() {
       console.log("  maestros                    quién puede entrar a /admin");
       console.log("  maestro <correo>            nombra operador de plataforma");
       console.log("  quitar-maestro <correo>     le quita el privilegio");
+      console.log("  contrasena <correo>         restablece su contraseña");
   }
 }
 

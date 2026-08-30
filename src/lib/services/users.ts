@@ -123,6 +123,35 @@ export async function findUserByEmail(organizationId: string, email: string) {
 }
 
 /**
+ * Restablece la contraseña de un usuario buscándolo por correo, sin pasar por
+ * un consultorio.
+ *
+ * Solo la usa el script de terminal, que exige acceso a la máquina y a la base.
+ * NO se expone por la interfaz: una pantalla que permita cambiarle la
+ * contraseña a cualquiera por correo es una puerta de entrada, no una comodidad.
+ *
+ * Existe porque las contraseñas se guardan como hash bcrypt y son
+ * irrecuperables por diseño: cuando alguien la olvida, el único camino es
+ * ponerle una nueva.
+ */
+export async function resetUserPasswordGlobal(email: string, newPassword: string) {
+  const normalized = email.toLowerCase().trim();
+
+  if (newPassword.length < 8) {
+    throw new Error("La contraseña debe tener al menos 8 caracteres.");
+  }
+
+  const user = await db.user.findUnique({ where: { email: normalized } });
+  if (!user) throw new Error(`No existe ningún usuario con el correo ${normalized}.`);
+
+  return db.user.update({
+    where: { email: normalized },
+    data: { passwordHash: await hashPassword(newPassword) },
+    select: { email: true, fullName: true },
+  });
+}
+
+/**
  * Busca un usuario por correo en TODA la plataforma. La usa el login, que aún
  * no sabe a qué consultorio pertenece quien está entrando.
  *
