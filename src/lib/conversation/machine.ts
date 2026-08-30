@@ -97,7 +97,8 @@ function intentOf(text: string): "schedule" | "consult" | "reschedule" | "cancel
  * cuando el título de un botón excede su límite. Es una red de seguridad — las
  * etiquetas deberían caber— pero evita que el bot ignore su propio botón.
  */
-function pick(input: string, options: string[]): number | null {
+/** Se exporta para poder probarlo: es la regla que más veces ha mordido. */
+export function pick(input: string, options: string[]): number | null {
   const t = input.trim().toLowerCase();
 
   const n = Number(t.replace(/\D/g, ""));
@@ -106,7 +107,16 @@ function pick(input: string, options: string[]): number | null {
   const exact = options.findIndex((o) => o.toLowerCase() === t);
   if (exact >= 0) return exact;
 
-  return options.findIndex((o) => o.slice(0, MAX_OPTION).toLowerCase() === t);
+  // findIndex devuelve -1, NO null. Devolverlo tal cual rompía las 12
+  // comprobaciones `choice === null` del archivo y, peor, el operador `??`:
+  //
+  //   const choice = pick(text, MENU_OPTIONS) ?? menuFromIntent(intent);
+  //
+  // `??` solo actúa sobre null/undefined, así que con -1 nunca entraba y
+  // `menuFromIntent` era código muerto: el bot no entendía nada escrito en
+  // lenguaje libre, solo números y etiquetas exactas.
+  const cut = options.findIndex((o) => o.slice(0, MAX_OPTION).toLowerCase() === t);
+  return cut >= 0 ? cut : null;
 }
 
 // ---------------------------------------------------------------------------

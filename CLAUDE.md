@@ -21,6 +21,11 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
+**Pruebas:** `npm test` (o `npm run test:watch`). Corren en 2 segundos y NO
+tocan la base: por ahora solo cubren lógica pura (`tests/unit/`). Las de
+aislamiento entre consultorios están pendientes de que exista una base de
+pruebas — **jamás se prueba contra producción**.
+
 ---
 
 ## Stack
@@ -204,9 +209,13 @@ base circularon por un chat. Pendiente desde julio. Mientras sigan vivos, todo
 el blindaje tiene una puerta abierta por detrás. **Antes de meter consultorios
 de terceros.**
 
-**2. 🔴 Cero pruebas.** Se tocó webhook, login y aislamiento sin una sola
-prueba. La primera que vale la pena: dos consultorios con el mismo correo, que
-el alta lo rechace.
+**2. 🟡 Pruebas: arrancadas, a medias.** Ya hay 35 en `tests/unit` (vitest),
+solo de lógica pura: edad, IMC, cifrado de secretos, normalización de teléfonos
+y el matcher de opciones del bot. Encontraron un bug real a la primera (ver
+abajo). **Falta lo que más vale: aislamiento entre consultorios**, y eso
+necesita una base de pruebas — no hay Docker ni Postgres local en esta máquina.
+Cuando la haya, van en `tests/integration/` con su propia guarda que verifique
+a qué base apunta antes de escribir.
 
 **3. 🟡 Fase 1 restante:** `type` / `status` / `maxUsers` en `Organization`
 (hoy solo hay `isActive`), `SUPER_ADMIN` + panel `/admin`, índices compuestos
@@ -215,6 +224,15 @@ el alta lo rechace.
 **4. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
 Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la
 ignora y en Railway ese es justo el caso. Detalle en `MULTITENANT.md` §7.
+
+**Bug que encontraron las pruebas (26 ago 2026).** `pick()` en
+`machine.ts` estaba declarada `number | null` pero devolvía el `-1` de
+`findIndex`. Consecuencia: las 12 comprobaciones `if (choice === null)` —las
+que repiten el menú cuando el paciente escribe algo que el bot no entiende—
+**nunca se cumplían**, y `pick(...) ?? menuFromIntent(intent)` jamás entraba al
+respaldo, porque `??` solo actúa sobre null/undefined. `menuFromIntent` era
+código muerto: el bot no interpretaba lenguaje libre, solo números y etiquetas
+exactas. Ya corregido, con prueba de regresión.
 
 **Revisado y sano** (no volver a auditarlo): `google.ts`, `schedule.ts`,
 `machine.ts` y `preregistration.ts` acotan bien por `organizationId`. El
