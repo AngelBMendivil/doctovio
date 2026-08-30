@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import type { UserRoleName } from "@prisma/client";
+import type { UserRoleName, ClinicStatus, ClinicType, PaymentMethod } from "@prisma/client";
 
 /**
  * ALTA DE CONSULTORIOS.
@@ -257,6 +257,295 @@ export async function createClinic(input: CreateClinicInput) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// PLATAFORMA — lo administra el operador (isPlatformAdmin), no los consultorios
+// ---------------------------------------------------------------------------
+
+/** Días que quedan (o que ya se pasaron, en negativo) hasta `paidUntil`. */
+const DAY_MS = 86_400_000;
+
+export type PaymentState = "SIN_REGISTRO" | "AL_CORRIENTE" | "POR_VENCER" | "VENCIDO";
+
+/**
+ * Estado de cobranza de un consultorio.
+ *
+ * Es SOLO informativo: nada en el sistema suspende por su cuenta a partir de
+ * esto. Cortarle a un médico el expediente de su paciente porque una
+ * transferencia no se capturó a tiempo no es un daño comercial, así que
+ * suspender siempre es una acción deliberada de una persona.
+ */
+export function paymentState(paidUntil: Date | null, avisoDias = 7): { state: PaymentState; days: number | null } {
+  if (!paidUntil) return { state: "SIN_REGISTRO", days: null };
+
+  // Se compara a nivel día: que sean las 11 p.m. no vuelve vencido a nadie.
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const limite = new Date(paidUntil);
+  limite.setHours(0, 0, 0, 0);
+
+  const days = Math.round((limite.getTime() - hoy.getTime()) / DAY_MS);
+
+  if (days < 0) return { state: "VENCIDO", days };
+  if (days <= avisoDias) return { state: "POR_VENCER", days };
+  return { state: "AL_CORRIENTE", days };
+}
+
+/** Los estados en los que un consultorio puede operar. */
+const OPERABLE: ClinicStatus[] = ["TRIAL", "ACTIVE"];
+
+/**
+ * Cambia el estado comercial de un consultorio.
+ *
+ * ÚNICO lugar donde se escribe `status`. Escribe también `isActive` en la misma
+ * operación porque son la misma verdad vista de dos formas: `status` es el
+ * estado comercial y `isActive` es la bandera operativa que consultan el
+ * middleware, el enrutamiento de WhatsApp y el cron de recordatorios.
+ *
+ * Actualizar una sin la otra deja al consultorio en un estado imposible —
+ * suspendido en el panel pero operando en la práctica, o al revés.
+ *
+ * Nunca borra nada. Al reactivar, todo vuelve como estaba.
+ */
+export async function setClinicStatus(organizationId: string, status: ClinicStatus) {
+  return db.organization.update({
+    where: { id: organizationId },
+    data: { status, isActive: OPERABLE.includes(status) },
+    select: { id: true, name: true, status: true, isActive: true },
+  });
+}
+
+/** Ajusta el plan contratado: giro, tope de usuarios y cuota. */
+export async function updateClinicPlan(
+  organizationId: string,
+  data: { type?: ClinicType; maxUsers?: number; planName?: string | null; monthlyFeeMxn?: number | null }
+) {
+  if (data.maxUsers !== undefined) {
+    if (!Number.isInteger(data.maxUsers) || data.maxUsers < 1) {
+      throw new Error("El tope de usuarios debe ser un número entero de al menos 1.");
+    }
+    // Bajar el tope por debajo de los usuarios que ya existen dejaría al
+    // consultorio en falta desde el minuto uno. Se avisa en vez de permitirlo
+    // en silencio; dar de baja gente es decisión del consultorio, no del plan.
+    const actuales = await db.user.count({ where: { organizationId, isActive: true } });
+    if (data.maxUsers < actuales) {
+      throw new Error(
+        `El consultorio ya tiene ${actuales} usuarios activos. ` +
+          `Baja primero a los que no ocupe antes de reducir el tope a ${data.maxUsers}.`
+      );
+    }
+  }
+
+  return db.organization.update({
+    where: { id: organizationId },
+    data: {
+      type: data.type,
+      maxUsers: data.maxUsers,
+      planName: data.planName,
+      monthlyFeeMxn: data.monthlyFeeMxn,
+    },
+    select: { id: true, name: true, type: true, maxUsers: true, planName: true, monthlyFeeMxn: true },
+  });
+}
+
+/**
+ * Registra un pago de suscripción y mueve la fecha de cobertura.
+ *
+ * `paidUntil` avanza al `periodEnd` del pago, pero SOLO si es posterior a lo
+ * que ya había: registrar un pago viejo de un periodo anterior no debe
+ * retroceder la cobertura de un consultorio que ya está al corriente.
+ *
+ * No confundir con `Payment`, que es el cobro del paciente al consultorio.
+ */
+export async function registerClinicPayment(params: {
+  organizationId: string;
+  amount: number;
+  currency?: string;
+  periodStart: Date;
+  periodEnd: Date;
+  paidAt: Date;
+  method?: PaymentMethod;
+  reference?: string;
+  notes?: string;
+  registeredById: string;
+}) {
+  if (!(params.amount > 0)) throw new Error("El monto debe ser mayor que cero.");
+  if (params.periodEnd <= params.periodStart) {
+    throw new Error("El fin del periodo debe ser posterior al inicio.");
+  }
+
+  return db.$transaction(async (tx) => {
+    const payment = await tx.clinicPayment.create({
+      data: {
+        organizationId: params.organizationId,
+        amount: params.amount,
+        currency: params.currency ?? "MXN",
+        periodStart: params.periodStart,
+        periodEnd: params.periodEnd,
+        paidAt: params.paidAt,
+        method: params.method ?? "TRANSFER",
+        reference: params.reference,
+        notes: params.notes,
+        registeredById: params.registeredById,
+      },
+    });
+
+    const org = await tx.organization.findUniqueOrThrow({
+      where: { id: params.organizationId },
+      select: { paidUntil: true, status: true },
+    });
+
+    if (!org.paidUntil || params.periodEnd > org.paidUntil) {
+      await tx.organization.update({
+        where: { id: params.organizationId },
+        data: {
+          paidUntil: params.periodEnd,
+          // Un consultorio en prueba que paga pasa a cliente. Uno suspendido NO
+          // se reactiva solo: reactivar es una decisión aparte, deliberada.
+          ...(org.status === "TRIAL" ? { status: "ACTIVE" as ClinicStatus, isActive: true } : {}),
+        },
+      });
+    }
+
+    return payment;
+  });
+}
+
+/**
+ * Panorama de la plataforma para el operador.
+ *
+ * Devuelve CONTEOS, nunca datos de pacientes. El operador necesita saber que un
+ * consultorio tiene 300 pacientes; no tiene por qué saber quiénes son.
+ */
+export async function listClinicsForPlatform() {
+  const orgs = await db.organization.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      status: true,
+      isActive: true,
+      maxUsers: true,
+      planName: true,
+      monthlyFeeMxn: true,
+      paidUntil: true,
+      createdAt: true,
+      _count: { select: { users: true, patients: true, appointments: true } },
+      whatsappConnections: { where: { isActive: true }, select: { id: true } },
+      doctorSchedules: { select: { id: true }, take: 1 },
+    },
+  });
+
+  return orgs.map((o) => {
+    const pago = paymentState(o.paidUntil);
+    return {
+      id: o.id,
+      name: o.name,
+      type: o.type,
+      status: o.status,
+      isActive: o.isActive,
+      users: o._count.users,
+      maxUsers: o.maxUsers,
+      // El tope se puede exceder si alguien lo bajó con usuarios ya dados de
+      // alta: se muestra para que se note, no se corrige solo.
+      overUserLimit: o._count.users > o.maxUsers,
+      patients: o._count.patients,
+      appointments: o._count.appointments,
+      planName: o.planName,
+      monthlyFeeMxn: o.monthlyFeeMxn,
+      paidUntil: o.paidUntil,
+      paymentState: pago.state,
+      paymentDays: pago.days,
+      whatsapp: o.whatsappConnections.length > 0,
+      hasSchedule: o.doctorSchedules.length > 0,
+      createdAt: o.createdAt,
+    };
+  });
+}
+
+/** Totales de la plataforma para el encabezado del panel. */
+export async function platformSummary() {
+  const clinics = await listClinicsForPlatform();
+
+  return {
+    total: clinics.length,
+    operando: clinics.filter((c) => c.isActive).length,
+    enPrueba: clinics.filter((c) => c.status === "TRIAL").length,
+    suspendidos: clinics.filter((c) => c.status === "SUSPENDED").length,
+    vencidos: clinics.filter((c) => c.paymentState === "VENCIDO").length,
+    porVencer: clinics.filter((c) => c.paymentState === "POR_VENCER").length,
+    usuarios: clinics.reduce((s, c) => s + c.users, 0),
+    // Ingreso mensual comprometido por los consultorios que hoy operan.
+    ingresoMensual: clinics
+      .filter((c) => c.isActive)
+      .reduce((s, c) => s + (c.monthlyFeeMxn ?? 0), 0),
+  };
+}
+
+/**
+ * Nombra (o quita) a un operador de plataforma.
+ *
+ * No hay pantalla para esto a propósito: el primer operador tiene que crearse
+ * desde fuera —huevo y gallina— y darse el privilegio a uno mismo desde la
+ * interfaz es justo lo que no debe poder hacerse. Se hace desde el script, que
+ * exige acceso a la máquina y a la base.
+ *
+ * Ojo: NO da acceso a datos clínicos de ningún consultorio, solo al panel.
+ */
+export async function setPlatformAdmin(email: string, value: boolean) {
+  const normalized = email.toLowerCase().trim();
+
+  const user = await db.user.findUnique({ where: { email: normalized } });
+  if (!user) throw new Error(`No existe ningún usuario con el correo ${normalized}.`);
+
+  return db.user.update({
+    where: { email: normalized },
+    data: { isPlatformAdmin: value },
+    select: { id: true, email: true, fullName: true, isPlatformAdmin: true },
+  });
+}
+
+/** Quiénes pueden entrar al panel de plataforma. */
+export async function listPlatformAdmins() {
+  return db.user.findMany({
+    where: { isPlatformAdmin: true },
+    select: { email: true, fullName: true, isActive: true, organization: { select: { name: true } } },
+    orderBy: { email: "asc" },
+  });
+}
+
+/** Detalle de un consultorio, con su historial de pagos. */
+export async function getClinicDetail(organizationId: string) {
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      id: true,
+      name: true,
+      legalName: true,
+      type: true,
+      status: true,
+      isActive: true,
+      maxUsers: true,
+      planName: true,
+      monthlyFeeMxn: true,
+      paidUntil: true,
+      createdAt: true,
+      _count: { select: { patients: true, appointments: true } },
+      // Datos de la cuenta, no clínicos.
+      users: {
+        select: { id: true, fullName: true, email: true, primaryRole: true, isActive: true, lastLoginAt: true },
+        orderBy: { createdAt: "asc" },
+      },
+      clinicPayments: { orderBy: { paidAt: "desc" }, take: 24 },
+      whatsappConnections: { select: { instanceId: true, phoneNumber: true, isActive: true } },
+    },
+  });
+
+  if (!org) return null;
+
+  return { ...org, payment: paymentState(org.paidUntil) };
+}
+
 /** Consultorios de la plataforma, con lo mínimo para saber si están sanos. */
 export async function listClinics() {
   const orgs = await db.organization.findMany({
@@ -294,9 +583,11 @@ export async function listClinics() {
  * funcionar sin ningún paso extra.
  */
 export async function setClinicActive(organizationId: string, isActive: boolean) {
-  return db.organization.update({
-    where: { id: organizationId },
-    data: { isActive },
-    select: { id: true, name: true, isActive: true },
-  });
+  // Delega en setClinicStatus para que `status` e `isActive` nunca se
+  // contradigan. Si esta función escribiera `isActive` por su cuenta, el script
+  // y el panel dirían cosas distintas del mismo consultorio.
+  //
+  // Al reactivar se elige ACTIVE y no TRIAL: quien vuelve de una suspensión es
+  // un cliente, no alguien que empieza su prueba.
+  return setClinicStatus(organizationId, isActive ? "ACTIVE" : "SUSPENDED");
 }

@@ -362,12 +362,55 @@ model Payment {
 // ORGANIZACIÓN / MULTIEMPRESA
 // ============================================================================
 
+/// Giro del consultorio. Habilita módulos particulares SIN separar la app:
+/// Doctovio es una sola plataforma. Agregar PSYCHOLOGY, NUTRITION o
+/// PHYSIOTHERAPY después no requiere tocar el core.
+enum ClinicType {
+  MEDICAL
+  DENTAL
+}
+
+/// Estado comercial del consultorio.
+///
+/// TRIAL y ACTIVE pueden operar; SUSPENDED y CANCELLED no. Suspender NUNCA
+/// borra nada: los datos quedan intactos y al reactivar todo vuelve como
+/// estaba.
+enum ClinicStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
   legalName String?  @map("legal_name")
   logoUrl   String?  @map("logo_url")
+
+  /// Puede operar ahora mismo. Es la bandera que consultan el middleware, el
+  /// enrutamiento de WhatsApp y el cron: por eso se conserva y no se sustituye
+  /// por `status`.
+  ///
+  /// REGLA: se deriva de `status` (isActive = status ∈ {TRIAL, ACTIVE}) y las
+  /// dos se escriben JUNTAS, siempre desde `setClinicStatus()`. Nunca actualices
+  /// una sin la otra o el consultorio queda en un estado imposible: suspendido
+  /// en el panel pero operando en la práctica.
   isActive  Boolean  @default(true) @map("is_active")
+
+  // --- Comercial (lo administra el operador de plataforma) ---
+  type          ClinicType   @default(MEDICAL)
+  status        ClinicStatus @default(TRIAL)
+  /// Tope de usuarios según el plan contratado. Modificable por consultorio.
+  maxUsers      Int          @default(3) @map("max_users")
+  /// Nombre del plan, libre a propósito: no vale la pena un catálogo todavía.
+  planName      String?      @map("plan_name")
+  monthlyFeeMxn Float?       @map("monthly_fee_mxn")
+  /// Hasta cuándo está cubierto. Pasada esta fecha el panel lo marca vencido,
+  /// pero NO se suspende solo: cortarle el expediente a un médico a media
+  /// consulta por una transferencia sin registrar no es un daño comercial.
+  paidUntil     DateTime?    @map("paid_until")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -399,8 +442,42 @@ model Organization {
   googleCalendars    GoogleCalendarConnection[]
   reminderJobs       ReminderJob[]
   whatsappConnections WhatsappConnection[]
+  clinicPayments     ClinicPayment[]
 
+  @@index([status])
   @@map("organizations")
+}
+
+/// Pago de un CONSULTORIO a Doctovio (la suscripción).
+///
+/// OJO: no confundir con `Payment`, que es el pago del PACIENTE al consultorio
+/// por su consulta. Son cobranzas distintas y viven separadas a propósito: si
+/// se mezclaran, el reporte de ingresos que exporte un médico llevaría de
+/// regalo cuánto le paga a Doctovio.
+///
+/// Se captura a mano: el operador recibe la transferencia y la registra. No hay
+/// pasarela todavía y no hace falta con pocos consultorios.
+model ClinicPayment {
+  id             String        @id @default(cuid())
+  organizationId String        @map("organization_id")
+  amount         Float
+  currency       String        @default("MXN")
+  /// Periodo que cubre el pago. Es lo que mueve `Organization.paidUntil`.
+  periodStart    DateTime      @map("period_start")
+  periodEnd      DateTime      @map("period_end")
+  /// Cuándo se recibió realmente, que no es lo mismo que cuándo se capturó.
+  paidAt         DateTime      @map("paid_at")
+  method         PaymentMethod @default(TRANSFER)
+  reference      String?
+  notes          String?
+  /// Quién lo registró. Es dinero: siempre debe haber un responsable.
+  registeredById String        @map("registered_by_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, periodEnd])
+  @@map("clinic_payments")
 }
 
 model Branch {
@@ -477,6 +554,20 @@ model User {
   fullName       String       @map("full_name")
   phone          String?
   primaryRole    UserRoleName @map("primary_role")
+
+  /// Operador de la plataforma (el "usuario maestro").
+  ///
+  /// Es una BANDERA, no un rol, y la diferencia importa: `UserRoleName`
+  /// alimenta la matriz de `rbac.ts`, donde cada permiso lista los roles que lo
+  /// tienen. Un `SUPER_ADMIN` ahí sería un rol que existe DENTRO de un
+  /// consultorio — justo lo contrario de lo que es.
+  ///
+  /// Al ser ortogonal al rol, la misma persona puede ser ADMIN de un
+  /// consultorio y operador de plataforma, sin que una cosa contamine la otra.
+  /// Da acceso a /admin; NO da acceso a los datos clínicos de ningún
+  /// consultorio.
+  isPlatformAdmin Boolean     @default(false) @map("is_platform_admin")
+
   status         UserStatus   @default(ACTIVE)
   lastLoginAt    DateTime?    @map("last_login_at")
   isActive       Boolean      @default(true) @map("is_active")

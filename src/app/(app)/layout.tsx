@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession, isClinicSuspended } from "@/lib/auth/session";
+import { getSession, isClinicSuspended, isPlatformAdmin } from "@/lib/auth/session";
 import { countNeedsHuman } from "@/lib/conversation/orchestrator";
 import { AppShell } from "@/components/layout/app-shell";
 
@@ -13,10 +13,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Conversaciones esperando a una persona: alimenta la campana del encabezado
   // para que nadie se quede colgado sin que el consultorio se entere.
-  const pendingConversations = await countNeedsHuman(session.organizationId);
+  //
+  // La bandera de plataforma NO viaja en el token: se lee de la base, igual que
+  // la suspensión. Ambas consultas comparten el mismo `cache()` por request, así
+  // que esto no agrega una segunda vuelta a la base.
+  const [pendingConversations, platformAdmin] = await Promise.all([
+    countNeedsHuman(session.organizationId),
+    isPlatformAdmin(session.userId),
+  ]);
 
   return (
-    <AppShell session={session} pendingConversations={pendingConversations}>
+    <AppShell
+      session={{ ...session, isPlatformAdmin: platformAdmin }}
+      pendingConversations={pendingConversations}
+    >
       {children}
     </AppShell>
   );

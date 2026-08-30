@@ -190,7 +190,41 @@ habría dejado dos conceptos de tenant compitiendo.
 Railway solo corre el build, **las migraciones se aplican a mano** con
 `npx prisma migrate deploy`.
 
-**Cómo dar de alta un consultorio** (mientras no exista el panel):
+**Operador de plataforma (el "usuario maestro").** Panel en `/admin`: cuántos
+consultorios hay, usuarios por consultorio, estado y cobranza.
+
+Es una BANDERA (`User.isPlatformAdmin`), NO un rol. `UserRoleName` alimenta la
+matriz de `rbac.ts`, donde cada permiso lista los roles que lo tienen; un
+`SUPER_ADMIN` ahí sería un rol que existe DENTRO de un consultorio, justo lo
+contrario de lo que es. Al ser ortogonal, la misma persona puede ser ADMIN de un
+consultorio y operador de plataforma. **No da acceso a datos clínicos:** el
+panel maneja conteos y cobranza, nunca pacientes.
+
+Se nombra desde el script, no desde una pantalla — el primero no puede crearse
+desde dentro, y darse el privilegio a uno mismo por la interfaz es lo que no
+debe poder hacerse:
+
+```powershell
+npm run consultorio -- maestro tu@correo.com
+npm run consultorio -- maestros
+```
+
+**Cobranza: `ClinicPayment` ≠ `Payment`.** `Payment` es el cobro del PACIENTE al
+consultorio por su consulta. `ClinicPayment` es el pago del CONSULTORIO a
+Doctovio. Van separadas para que el reporte de ingresos que exporte un médico no
+lleve de regalo cuánto te paga a ti. La captura es manual.
+
+**Ningún consultorio se suspende solo por falta de pago.** El panel marca en
+rojo a los vencidos, pero suspender es siempre una acción deliberada de una
+persona: cortarle a un médico el expediente de su paciente a media consulta
+porque una transferencia no se capturó no es un daño comercial.
+
+**`status` e `isActive` se escriben JUNTAS**, siempre desde `setClinicStatus()`.
+`status` es el estado comercial e `isActive` la bandera operativa que consultan
+el middleware, WhatsApp y el cron. Actualizar una sin la otra deja al
+consultorio suspendido en el panel pero operando en la práctica.
+
+**Cómo dar de alta un consultorio** (el alta sigue siendo por script):
 
 ```powershell
 copy scripts\consultorio-ejemplo.json mi-consultorio.json
@@ -217,9 +251,9 @@ necesita una base de pruebas — no hay Docker ni Postgres local en esta máquin
 Cuando la haya, van en `tests/integration/` con su propia guarda que verifique
 a qué base apunta antes de escribir.
 
-**3. 🟡 Fase 1 restante:** `type` / `status` / `maxUsers` en `Organization`
-(hoy solo hay `isActive`), `SUPER_ADMIN` + panel `/admin`, índices compuestos
-(a 40 consultorios la agenda se va a sentir).
+**3. 🟡 Fase 1 restante:** índices compuestos (a 40 consultorios la agenda se
+va a sentir). El resto de la fase 1 ya está: `type` / `status` / `maxUsers`,
+operador de plataforma y panel `/admin` (26 ago 2026).
 
 **4. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
 Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la

@@ -17,7 +17,14 @@
 
 import { readFileSync } from "fs";
 import { createInterface } from "readline";
-import { createClinic, listClinics, setClinicActive, type CreateClinicInput } from "../src/lib/services/clinics";
+import {
+  createClinic,
+  listClinics,
+  setClinicActive,
+  setPlatformAdmin,
+  listPlatformAdmins,
+  type CreateClinicInput,
+} from "../src/lib/services/clinics";
 import { db } from "../src/lib/db";
 
 function confirmar(pregunta: string): Promise<boolean> {
@@ -105,6 +112,36 @@ async function cambiarEstado(id: string, activo: boolean) {
   }
 }
 
+/**
+ * Nombra al operador de plataforma.
+ *
+ * Vive aquí y no en una pantalla a propósito: el primer operador no puede
+ * crearse desde dentro —huevo y gallina— y darse el privilegio a uno mismo
+ * desde la interfaz es exactamente lo que no debe poder hacerse.
+ */
+async function maestro(email: string, quitar: boolean) {
+  const u = await setPlatformAdmin(email, !quitar);
+  console.log(
+    u.isPlatformAdmin
+      ? `${u.fullName} <${u.email}> ya es operador de plataforma. Entra en /admin.`
+      : `${u.fullName} <${u.email}> dejó de ser operador de plataforma.`
+  );
+}
+
+async function listarMaestros() {
+  const admins = await listPlatformAdmins();
+  if (admins.length === 0) {
+    console.log("No hay operadores de plataforma. Nadie puede entrar a /admin.");
+    console.log('Nombra uno con:  npm run consultorio -- maestro tu@correo.com');
+    return;
+  }
+  console.log(`\n${admins.length} operador(es) de plataforma:\n`);
+  admins.forEach((a) =>
+    console.log(`  ${a.fullName} <${a.email}>${a.isActive ? "" : "  (usuario inactivo)"}`)
+  );
+  console.log("");
+}
+
 async function main() {
   const [comando, arg] = process.argv.slice(2);
 
@@ -120,8 +157,23 @@ async function main() {
     case "activar":
       if (!arg) throw new Error("Falta el id del consultorio.");
       return cambiarEstado(arg, true);
+    case "maestro":
+      if (!arg) throw new Error("Falta el correo del usuario.");
+      return maestro(arg, false);
+    case "quitar-maestro":
+      if (!arg) throw new Error("Falta el correo del usuario.");
+      return maestro(arg, true);
+    case "maestros":
+      return listarMaestros();
     default:
-      console.log("Comandos: listar | crear <archivo.json> | suspender <id> | activar <id>");
+      console.log("Comandos:");
+      console.log("  listar                      consultorios y su salud");
+      console.log("  crear <archivo.json>        da de alta un consultorio");
+      console.log("  suspender <id>              corta el acceso (no borra nada)");
+      console.log("  activar <id>                lo reactiva");
+      console.log("  maestros                    quién puede entrar a /admin");
+      console.log("  maestro <correo>            nombra operador de plataforma");
+      console.log("  quitar-maestro <correo>     le quita el privilegio");
   }
 }
 

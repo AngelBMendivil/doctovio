@@ -18,6 +18,11 @@ export type SessionPayload = {
    * a pasar lo que este campo existe para evitar.
    */
   clinicActive?: boolean;
+  /**
+   * Operador de plataforma. Tampoco viaja en el token, y por la misma razón:
+   * quitarle el privilegio a alguien tiene que surtir efecto ya, no en 7 días.
+   */
+  isPlatformAdmin?: boolean;
 };
 
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "mvp_session";
@@ -79,6 +84,7 @@ const loadAccountState = cache(async (userId: string) => {
     select: {
       status: true,
       isActive: true,
+      isPlatformAdmin: true,
       organizationId: true,
       organization: { select: { isActive: true } },
     },
@@ -89,6 +95,7 @@ const loadAccountState = cache(async (userId: string) => {
     userActive: user.isActive && user.status === "ACTIVE",
     organizationId: user.organizationId,
     clinicActive: user.organization.isActive,
+    isPlatformAdmin: user.isPlatformAdmin,
   };
 });
 
@@ -129,7 +136,39 @@ export async function requireSession(): Promise<SessionPayload> {
     redirect("/suspendido");
   }
 
-  return { ...session, clinicActive: true };
+  return { ...session, clinicActive: true, isPlatformAdmin: state.isPlatformAdmin };
+}
+
+/**
+ * Exige ser operador de plataforma. Es la única puerta de /admin.
+ *
+ * Se comprueba SIEMPRE contra la base, nunca contra el token: quitarle el
+ * privilegio a alguien tiene que surtir efecto de inmediato.
+ *
+ * Ojo con lo que esto NO hace: no da acceso a los datos clínicos de ningún
+ * consultorio. El operador ve cuántos pacientes tiene cada uno, jamás quiénes
+ * son. Si algún día hiciera falta entrar al expediente de un consultorio para
+ * dar soporte, eso es otra decisión —con consentimiento y bitácora— y no debe
+ * colarse por esta puerta.
+ */
+export async function requirePlatformAdmin(): Promise<SessionPayload> {
+  const session = await getSession();
+  if (!session) throw new Error("UNAUTHENTICATED");
+
+  const state = await loadAccountState(session.userId);
+  if (!state || !state.userActive) throw new Error("UNAUTHENTICATED");
+  if (!state.isPlatformAdmin) throw new Error("FORBIDDEN");
+
+  // A propósito NO se valida `clinicActive`: el operador de plataforma tiene
+  // que poder entrar al panel justamente cuando hay consultorios suspendidos
+  // —incluido el suyo— para reactivarlos.
+  return { ...session, isPlatformAdmin: true, clinicActive: state.clinicActive };
+}
+
+/** ¿Este usuario ve el enlace al panel de plataforma? Para la interfaz. */
+export async function isPlatformAdmin(userId: string): Promise<boolean> {
+  const state = await loadAccountState(userId);
+  return state?.isPlatformAdmin ?? false;
 }
 
 /**
