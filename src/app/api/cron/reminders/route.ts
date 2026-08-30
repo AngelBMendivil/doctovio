@@ -17,6 +17,12 @@ export const dynamic = "force-dynamic";
  * Es idempotente: si se llama dos veces seguidas, la segunda no encuentra nada
  * pendiente. Cada recordatorio se manda una sola vez porque su fila cambia de
  * estado al enviarse.
+ *
+ * La respuesta trae `clinics` (cuántos consultorios se atendieron) y
+ * `suspended` (cuántos recordatorios quedaron detenidos porque su consultorio
+ * está suspendido). Ese segundo dato importa: sin él, "0 enviados" se ve igual
+ * cuando no había nada que mandar que cuando hay una clínica suspendida con la
+ * cola llena.
  */
 export async function GET(request: Request) {
   if (!CRON_SECRET) {

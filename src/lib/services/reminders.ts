@@ -125,6 +125,21 @@ async function sendOne(jobId: string): Promise<void> {
     return;
   }
 
+  // La cita ya pasó. Mandar "te recordamos tu cita" después del hecho es peor
+  // que no mandar nada: confunde al paciente y deja mal al consultorio.
+  //
+  // Pasa siempre que la cola se atrasa — el cron caído unas horas, o un
+  // consultorio suspendido varios días que se reactiva con la cola llena. Se
+  // compara contra startTime, nunca contra scheduledDate (que es medianoche
+  // UTC y desplaza el día en México).
+  if (appt.startTime <= new Date()) {
+    await db.reminderJob.update({
+      where: { id: jobId },
+      data: { status: "SKIPPED", error: "La cita ya había pasado cuando tocó mandarlo." },
+    });
+    return;
+  }
+
   const phone = appt.whatsappPhone || appt.patient.phone;
   if (!phone) {
     await db.reminderJob.update({
@@ -201,20 +216,83 @@ async function sendOne(jobId: string): Promise<void> {
  * Lo llama el cron. El lote es limitado a propósito: si algo salió mal y hay
  * mil pendientes, es mejor mandarlos poco a poco que quemar la cuota de Meta
  * y que te bloqueen el número.
+ *
+ * Dos reglas que se aprendieron a golpes y no hay que quitar:
+ *
+ *   1. Solo consultorios ACTIVOS. Uno suspendido no puede seguir escribiéndole
+ *      a sus pacientes por WhatsApp.
+ *   2. El lote se reparte ENTRE consultorios, no se toma de una cola global.
+ *      Si no, el que trae más atraso se lleva todos los turnos y los demás se
+ *      quedan sin mandar nada, en silencio.
  */
-export async function processDueReminders(limit = 50): Promise<{ sent: number; total: number }> {
-  const due = await db.reminderJob.findMany({
-    where: { status: "PENDING", sendAt: { lte: new Date() } },
+export async function processDueReminders(
+  limit = 50
+): Promise<{ sent: number; total: number; clinics: number; suspended: number }> {
+  const now = new Date();
+
+  // Solo consultorios ACTIVOS. Un consultorio suspendido no puede seguir
+  // mandándole WhatsApp a sus pacientes: la suspensión le corta el acceso al
+  // sistema, y el cron corriendo por su lado la volvía decorativa.
+  //
+  // Sus recordatorios quedan PENDING, no se borran: si lo reactivan, los que
+  // sigan teniendo sentido salen solos. Los de citas ya pasadas los descarta
+  // sendOne().
+  const pendingFilter = { status: "PENDING" as const, sendAt: { lte: now } };
+
+  const clinics = await db.organization.findMany({
+    where: { isActive: true, reminderJobs: { some: pendingFilter } },
     select: { id: true },
-    orderBy: { sendAt: "asc" },
-    take: limit,
   });
 
-  for (const j of due) await sendOne(j.id);
-
-  const sent = await db.reminderJob.count({
-    where: { id: { in: due.map((d) => d.id) }, status: "SENT" },
+  // Visibilidad: cuántos quedaron detenidos por suspensión. Sin este dato,
+  // "0 enviados" se ve igual que "no había nada que mandar".
+  const suspended = await db.reminderJob.count({
+    where: { ...pendingFilter, organization: { isActive: false } },
   });
 
-  return { sent, total: due.length };
+  if (clinics.length === 0) {
+    return { sent: 0, total: 0, clinics: 0, suspended };
+  }
+
+  // Reparto parejo entre consultorios.
+  //
+  // Antes se tomaban los 50 más viejos de la cola global: con 40 consultorios,
+  // uno solo con la cola atrasada se llevaba los 50 turnos de cada corrida y
+  // los otros 39 no mandaban nada — y como el cron reportaba éxito, nadie se
+  // enteraba. Cada consultorio se lleva su parte; lo que no usa uno queda
+  // disponible para los siguientes.
+  const share = Math.max(1, Math.floor(limit / clinics.length));
+  const ids: string[] = [];
+
+  // Primera vuelta: a cada consultorio su parte.
+  for (const c of clinics) {
+    if (ids.length >= limit) break;
+    const jobs = await db.reminderJob.findMany({
+      where: { ...pendingFilter, organizationId: c.id },
+      select: { id: true },
+      orderBy: { sendAt: "asc" },
+      take: Math.min(share, limit - ids.length),
+    });
+    ids.push(...jobs.map((j) => j.id));
+  }
+
+  // Segunda vuelta: el cupo que nadie usó se reparte entre los que sí tienen
+  // cola. Sin esto, con 40 consultorios la parte de cada uno es 1 y se
+  // desperdiciarían 10 turnos por corrida mientras alguien acumula atraso.
+  for (const c of clinics) {
+    if (ids.length >= limit) break;
+    const jobs = await db.reminderJob.findMany({
+      where: { ...pendingFilter, organizationId: c.id, id: { notIn: ids } },
+      select: { id: true },
+      orderBy: { sendAt: "asc" },
+      take: limit - ids.length,
+    });
+    ids.push(...jobs.map((j) => j.id));
+  }
+
+  for (const id of ids) await sendOne(id);
+
+  const sent = await db.reminderJob.count({ where: { id: { in: ids }, status: "SENT" } });
+
+  return { sent, total: ids.length, clinics: clinics.length, suspended };
 }
