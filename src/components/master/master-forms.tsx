@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
+import { STATES_BY_COUNTRY } from "@/lib/constants/locations";
 
 /** React 18: useFormState / useFormStatus. `useActionState` no existe aquí. */
 const initial: MasterState = {};
@@ -90,15 +91,40 @@ export function NewClinicForm({
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="address">Dirección</Label>
-            <Input id="address" name="address" />
+            <Input id="address" name="address" placeholder="Calle, número, colonia" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="city">Ciudad</Label>
             <Input id="city" name="city" />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="postalCode">Código postal</Label>
+            {/* 5 dígitos. inputMode numérico para que en celular salga el
+                teclado de números, pero el tipo sigue siendo texto: con
+                type="number" se pierden los ceros a la izquierda, y hay CP
+                que empiezan con cero. */}
+            <Input
+              id="postalCode"
+              name="postalCode"
+              inputMode="numeric"
+              pattern="[0-9]{5}"
+              maxLength={5}
+              placeholder="22010"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="state">Estado</Label>
-            <Input id="state" name="state" />
+            {/* Se reusa la lista de lib/constants/locations.ts, la misma que
+                usa Configuración. Duplicarla acabaría con dos listas que se
+                desincronizan. */}
+            <Select id="state" name="state" defaultValue="">
+              <option value="">Selecciona un estado</option>
+              {STATES_BY_COUNTRY.MX.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </Select>
           </div>
         </div>
       </section>

@@ -60,6 +60,13 @@ export async function createClinicAction(_p: MasterState, f: FormData): Promise<
   let nuevoId = "";
 
   const r = await run(async (masterUserId) => {
+    // El `pattern` del input es comodidad para quien captura, no validación:
+    // un formulario enviado a mano se lo salta. Se revisa aquí también.
+    const cp = str(f.get("postalCode")).replace(/\D/g, "");
+    if (cp && cp.length !== 5) {
+      throw new Error("El código postal debe tener 5 dígitos.");
+    }
+
     const clinic = await createClinic({
       name: str(f.get("name")),
       legalName: str(f.get("legalName")) || undefined,
@@ -67,6 +74,7 @@ export async function createClinicAction(_p: MasterState, f: FormData): Promise<
         address: str(f.get("address")) || undefined,
         city: str(f.get("city")) || undefined,
         state: str(f.get("state")) || undefined,
+        postalCode: cp || undefined,
         phone: str(f.get("phone")) || undefined,
       },
       // El doctor principal queda como ADMIN: en un consultorio de un solo

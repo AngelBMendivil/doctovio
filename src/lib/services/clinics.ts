@@ -34,6 +34,7 @@ export type CreateClinicInput = {
     address?: string;
     city?: string;
     state?: string;
+    postalCode?: string;
     phone?: string;
   };
   /** Usuario administrador. Obligatorio: sin él nadie puede entrar. */
@@ -170,6 +171,7 @@ export async function createClinic(input: CreateClinicInput) {
         address: input.branch?.address,
         city: input.branch?.city,
         state: input.branch?.state,
+        postalCode: input.branch?.postalCode,
         phone: input.branch?.phone,
         country: "MX",
         isMain: true,

@@ -2,11 +2,13 @@
   "name": "Consultorio Dr. Ejemplo",
   "legalName": "Consultorio Dr. Ejemplo S.C.",
 
+  "_comentario_estado": "El estado debe escribirse igual que en la lista de src/lib/constants/locations.ts (por ejemplo 'Baja California', 'Ciudad de Mexico', 'Estado de Mexico'), para que coincida con lo que ofrece el panel.",
   "branch": {
     "name": "Consultorio principal",
     "address": "Av. Siempre Viva 742, Piso 3",
     "city": "Tijuana",
     "state": "Baja California",
+    "postalCode": "22010",
     "phone": "6641234567"
   },
 
