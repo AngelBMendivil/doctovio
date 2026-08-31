@@ -87,7 +87,7 @@ function ProfileMenu({ session, initials }: { session: SessionPayload; initials:
               seguridad la pone requirePlatformAdmin() del otro lado. */}
           {session.isPlatformAdmin && (
             <Link
-              href="/admin"
+              href="/master"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm text-foreground hover:bg-muted"
             >

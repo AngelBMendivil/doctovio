@@ -190,8 +190,8 @@ habría dejado dos conceptos de tenant compitiendo.
 Railway solo corre el build, **las migraciones se aplican a mano** con
 `npx prisma migrate deploy`.
 
-**Operador de plataforma (el "usuario maestro").** Panel en `/admin`: cuántos
-consultorios hay, usuarios por consultorio, estado y cobranza.
+**Administrador Maestro.** Panel en `/master` (Dashboard, Consultorios,
+Usuarios, Cobranza, Productos, Auditoría). `/admin` redirige ahí.
 
 Es una BANDERA (`User.isPlatformAdmin`), NO un rol. `UserRoleName` alimenta la
 matriz de `rbac.ts`, donde cada permiso lista los roles que lo tienen; un
@@ -213,6 +213,25 @@ npm run consultorio -- maestros
 consultorio por su consulta. `ClinicPayment` es el pago del CONSULTORIO a
 Doctovio. Van separadas para que el reporte de ingresos que exporte un médico no
 lleve de regalo cuánto te paga a ti. La captura es manual.
+
+**El precio NO vive en el código.** Vive en la tabla `products`
+(`DOCTOVIO_BASE`, 20 USD/mes). Al contratar se COPIA a `Subscription`, y al
+emitir se copia otra vez a `BillingCycle`. Por eso subirle el precio al catálogo
+no le cambia el cobro a quien ya firmó ni reescribe una mensualidad histórica.
+Si algún día encuentras un `20` en el código, está mal.
+
+**"Vencido" no se guarda, se DERIVA** (`cycleState()` en
+`platform-billing.ts`). Guardarlo obligaría a un proceso nocturno que recorriera
+la tabla; el día que fallara, el panel mostraría al corriente a alguien vencido.
+Derivado no puede desincronizarse.
+
+**La generación de mensualidades es idempotente** gracias a
+`@@unique([subscriptionId, period])`. Correrla dos veces el mismo mes no duplica
+el cobro.
+
+**El Master NO ve datos clínicos.** El panel maneja conteos, cobranza, usuarios
+y catálogo. Ve que una clínica tiene 300 pacientes, nunca quiénes son. "Ver como
+consultorio" se dejó fuera a propósito: cruzaría esa frontera.
 
 **Ningún consultorio se suspende solo por falta de pago.** El panel marca en
 rojo a los vencidos, pero suspender es siempre una acción deliberada de una

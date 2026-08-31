@@ -46,8 +46,8 @@ export async function setClinicStatusAction(
       newValues: { status },
     });
 
-    revalidatePath("/admin");
-    revalidatePath(`/admin/${organizationId}`);
+    revalidatePath("/master/consultorios");
+    revalidatePath(`/master/consultorios/${organizationId}`);
 
     return {
       ok:
@@ -101,7 +101,7 @@ export async function updateClinicPlanAction(
       newValues: data as Record<string, unknown>,
     });
 
-    revalidatePath(`/admin/${organizationId}`);
+    revalidatePath(`/master/consultorios/${organizationId}`);
     return { ok: "Plan actualizado." };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "No se pudo actualizar el plan." };
@@ -155,8 +155,8 @@ export async function registerPaymentAction(
       newValues: { amount, periodStart, periodEnd },
     });
 
-    revalidatePath("/admin");
-    revalidatePath(`/admin/${organizationId}`);
+    revalidatePath("/master/consultorios");
+    revalidatePath(`/master/consultorios/${organizationId}`);
     return { ok: `Pago de $${amount.toLocaleString("es-MX")} registrado.` };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "No se pudo registrar el pago." };

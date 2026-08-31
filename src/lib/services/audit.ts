@@ -2,7 +2,12 @@ import { db } from "@/lib/db";
 import type { AuditAction } from "@prisma/client";
 
 type LogAuditParams = {
-  organizationId: string;
+  /**
+   * NULO para acciones de plataforma sin consultorio: crear uno (todavía no
+   * existe), cambiar el precio de un producto (no es de nadie). Antes era
+   * obligatorio y esas acciones no cabían en la bitácora.
+   */
+  organizationId?: string | null;
   userId?: string | null;
   action: AuditAction;
   entity: string;
@@ -24,7 +29,7 @@ export async function logAudit(params: LogAuditParams): Promise<void> {
   try {
     await db.auditLog.create({
       data: {
-        organizationId: params.organizationId,
+        organizationId: params.organizationId ?? null,
         userId: params.userId ?? null,
         action: params.action,
         entity: params.entity,

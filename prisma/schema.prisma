@@ -443,9 +443,128 @@ model Organization {
   reminderJobs       ReminderJob[]
   whatsappConnections WhatsappConnection[]
   clinicPayments     ClinicPayment[]
+  subscriptions      Subscription[]
+  billingCycles      BillingCycle[]
+  clinicUsers        ClinicUser[]
 
   @@index([status])
   @@map("organizations")
+}
+
+/// Periodicidad de cobro de un producto.
+enum BillingFrequency {
+  MONTHLY
+  YEARLY
+}
+
+/// CATÁLOGO DE PRODUCTOS de Doctovio.
+///
+/// El precio vive AQUÍ, nunca en la lógica de negocio ni en el código. Cambiar
+/// lo que cuesta Doctovio es editar una fila, no desplegar.
+///
+/// Pensado para crecer sin tocar el core: planes distintos, add-ons, usuarios
+/// adicionales, IA, WhatsApp, almacenamiento. Cada uno es una fila más.
+model Product {
+  id               String           @id @default(cuid())
+  /// Identificador estable para referirse al producto desde fuera. Ej:
+  /// DOCTOVIO_BASE. No cambia aunque el nombre comercial sí.
+  code             String           @unique
+  name             String
+  description      String?
+  price            Float
+  currency         String           @default("USD")
+  billingFrequency BillingFrequency @default(MONTHLY) @map("billing_frequency")
+  isActive         Boolean          @default(true) @map("is_active")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("products")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Lo que un consultorio tiene contratado.
+///
+/// El precio se COPIA del producto al contratar, no se consulta por relación.
+/// Es deliberado: subirle el precio al catálogo no debe cambiarle el cobro a
+/// quien ya firmó, ni alterar una sola mensualidad histórica. Si algún día se
+/// quiere subir el precio a alguien, se edita SU suscripción.
+model Subscription {
+  id               String             @id @default(cuid())
+  organizationId   String             @map("organization_id")
+  productId        String             @map("product_id")
+  /// Precio congelado al contratar.
+  price            Float
+  currency         String             @default("USD")
+  billingFrequency BillingFrequency   @default(MONTHLY) @map("billing_frequency")
+  status           SubscriptionStatus @default(ACTIVE)
+  startedAt        DateTime           @map("started_at")
+  cancelledAt      DateTime?          @map("cancelled_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  organization  Organization   @relation(fields: [organizationId], references: [id])
+  product       Product        @relation(fields: [productId], references: [id])
+  billingCycles BillingCycle[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+/// Estado de una mensualidad.
+///
+/// OJO: no existe VENCIDO. Se DERIVA de `dueDate` contra la fecha de hoy
+/// (ver `cycleState()` en lib/services/billing-cycles.ts). Guardarlo como
+/// estado obligaría a un proceso que recorra la tabla cada noche cambiando
+/// filas, y si ese proceso falla un día el panel miente: mostraría al corriente
+/// a alguien vencido. Derivarlo no puede quedar desincronizado.
+enum BillingCycleStatus {
+  PENDING
+  PAID
+  PARTIAL
+  WAIVED
+}
+
+/// Mensualidad de un periodo concreto.
+///
+/// Una fila por consultorio y periodo. El `@@unique([subscriptionId, period])`
+/// es lo que hace idempotente la generación: correrla dos veces el mismo mes
+/// no duplica el cobro.
+model BillingCycle {
+  id             String             @id @default(cuid())
+  organizationId String             @map("organization_id")
+  subscriptionId String             @map("subscription_id")
+  /// Periodo en formato "2026-09". Cadena y no fecha: es una etiqueta de mes,
+  /// y como fecha se prestaría al mismo desfase de zona horaria que ya nos
+  /// mordió con scheduledDate.
+  period         String
+  /// Importe congelado al generarse. Cambiar el catálogo o la suscripción NO
+  /// altera mensualidades ya emitidas.
+  amount         Float
+  currency       String             @default("USD")
+  dueDate        DateTime           @map("due_date")
+  paidAt         DateTime?          @map("paid_at")
+  /// Acumulado de los pagos recibidos. Permite el estado PARTIAL.
+  paidAmount     Float              @default(0) @map("paid_amount")
+  status         BillingCycleStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  subscription Subscription    @relation(fields: [subscriptionId], references: [id])
+  payments     ClinicPayment[]
+
+  @@unique([subscriptionId, period])
+  @@index([organizationId, dueDate])
+  @@index([status, dueDate])
+  @@map("billing_cycles")
 }
 
 /// Pago de un CONSULTORIO a Doctovio (la suscripción).
@@ -460,6 +579,9 @@ model Organization {
 model ClinicPayment {
   id             String        @id @default(cuid())
   organizationId String        @map("organization_id")
+  /// Mensualidad que cubre. Opcional para no invalidar los pagos que se
+  /// registraron antes de que existieran los ciclos.
+  billingCycleId String?       @map("billing_cycle_id")
   amount         Float
   currency       String        @default("MXN")
   /// Periodo que cubre el pago. Es lo que mueve `Organization.paidUntil`.
@@ -474,10 +596,41 @@ model ClinicPayment {
   registeredById String        @map("registered_by_id")
   createdAt      DateTime      @default(now()) @map("created_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  billingCycle BillingCycle? @relation(fields: [billingCycleId], references: [id])
 
   @@index([organizationId, periodEnd])
+  @@index([billingCycleId])
   @@map("clinic_payments")
+}
+
+/// Pertenencia de un usuario a un consultorio.
+///
+/// Hasta ahora `User.organizationId` ataba a cada persona a UN consultorio.
+/// Esta tabla permite que un médico atienda en varios sin duplicar su cuenta,
+/// y es lo que hace posible "cambiar de consultorio" desde el panel Master.
+///
+/// `User.organizationId` se conserva como consultorio PRIMARIO: es lo que lee
+/// la sesión hoy y quitarlo obligaría a tocar los 23 servicios. Las dos
+/// conviven; esta tabla es la que manda para saber a qué consultorios pertenece
+/// alguien.
+model ClinicUser {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  userId         String       @map("user_id")
+  role           UserRoleName
+  status         UserStatus   @default(ACTIVE)
+  /// El consultorio con el que entra por defecto.
+  isPrimary      Boolean      @default(false) @map("is_primary")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("clinic_users")
 }
 
 model Branch {
@@ -593,6 +746,7 @@ model User {
   scheduleBlocks        ScheduleBlock[]
   appointmentHolds      AppointmentHold[]
   googleCalendar        GoogleCalendarConnection?
+  clinicUsers           ClinicUser[]
 
   /// El correo identifica a la PERSONA en toda la plataforma, no dentro de un
   /// consultorio. Sin esta restricción, dos consultorios podían tener el mismo
@@ -1861,7 +2015,14 @@ model PublicFormToken {
 
 model AuditLog {
   id             String      @id @default(cuid())
-  organizationId String      @map("organization_id")
+  /// NULO para acciones de plataforma que no pertenecen a ningún consultorio:
+  /// "Master creó un consultorio" (todavía no existe), "cambió el precio de un
+  /// producto" (no es de nadie en particular). Antes era obligatorio y esas
+  /// acciones simplemente no cabían en la bitácora.
+  ///
+  /// Las consultas de bitácora por consultorio filtran por este campo, así que
+  /// una fila con nulo no se cuela en la auditoría de ninguna clínica.
+  organizationId String?     @map("organization_id")
   userId         String?     @map("user_id")
   action         AuditAction
   entity         String      // e.g. "patient", "prescription"
@@ -1872,10 +2033,11 @@ model AuditLog {
   newValues      Json?       @map("new_values")
   createdAt      DateTime    @default(now()) @map("created_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  user         User?        @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
 
   @@index([organizationId, entity, entityId])
   @@index([organizationId, createdAt])
+  @@index([createdAt])
   @@map("audit_logs")
 }

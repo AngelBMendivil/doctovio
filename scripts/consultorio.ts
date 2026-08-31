@@ -36,23 +36,24 @@ import { db } from "../src/lib/db";
  */
 function preguntarOculto(pregunta: string): Promise<string> {
   return new Promise((resolve) => {
+    // El prompt se escribe DIRECTO a stdout, antes de crear la interfaz.
+    //
+    // La primera versión lo pasaba por rl.question() y silenciaba el eco
+    // interceptando _writeToOutput: eso silenciaba también la pregunta. La
+    // terminal quedaba en blanco esperando y parecía colgada. Escribirlo
+    // aparte garantiza que se vea.
+    process.stdout.write(pregunta);
+
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
 
-    let silenciar = false;
-    // readline escribe cada tecla mediante este método; se intercepta para no
-    // hacer eco de lo que se teclea después del prompt.
-    (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = (s: string) => {
-      if (!silenciar) process.stdout.write(s);
-    };
+    // Ahora sí, silencio total: readline ya no tiene que escribir nada.
+    (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = () => {};
 
-    rl.question(pregunta, (respuesta) => {
+    rl.question("", (respuesta) => {
       process.stdout.write("\n");
       rl.close();
       resolve(respuesta);
     });
-
-    // Después de que el prompt ya se escribió.
-    silenciar = true;
   });
 }
 
@@ -177,19 +178,32 @@ async function listarMaestros() {
  * Las contraseñas se guardan como hash bcrypt: son irrecuperables por diseño.
  * Cuando alguien la olvida, el único camino es ponerle una nueva.
  */
-async function contrasena(email: string) {
-  const nueva = await preguntarOculto(`Nueva contraseña para ${email}: `);
-  if (nueva.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+async function contrasena(email: string, directa?: string) {
+  let nueva: string;
 
-  const repetir = await preguntarOculto("Repítela: ");
-  if (nueva !== repetir) throw new Error("Las contraseñas no coinciden. No se cambió nada.");
+  if (directa) {
+    // Camino no interactivo: para terminales donde el prompt oculto no
+    // funciona. Queda en el historial de la terminal, de ahí el aviso.
+    nueva = directa;
+  } else {
+    nueva = await preguntarOculto(`Nueva contraseña para ${email}: `);
+    if (nueva.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+
+    const repetir = await preguntarOculto("Repítela: ");
+    if (nueva !== repetir) throw new Error("Las contraseñas no coinciden. No se cambió nada.");
+  }
 
   const u = await resetUserPasswordGlobal(email, nueva);
   console.log(`\nListo. ${u.fullName} <${u.email}> ya puede entrar con la contraseña nueva.`);
+
+  if (directa) {
+    console.log("\nOjo: la contraseña quedó escrita en el historial de esta terminal.");
+    console.log("Si te importa, límpialo con  Clear-History  (PowerShell).");
+  }
 }
 
 async function main() {
-  const [comando, arg] = process.argv.slice(2);
+  const [comando, arg, arg2] = process.argv.slice(2);
 
   switch (comando) {
     case "listar":
@@ -214,7 +228,7 @@ async function main() {
     case "contrasena":
     case "contraseña":
       if (!arg) throw new Error("Falta el correo del usuario.");
-      return contrasena(arg);
+      return contrasena(arg, arg2);
     default:
       console.log("Comandos:");
       console.log("  listar                      consultorios y su salud");
