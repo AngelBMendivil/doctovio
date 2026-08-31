@@ -21,10 +21,19 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
-**Pruebas:** `npm test` (o `npm run test:watch`). Corren en 2 segundos y NO
-tocan la base: por ahora solo cubren lógica pura (`tests/unit/`). Las de
-aislamiento entre consultorios están pendientes de que exista una base de
-pruebas — **jamás se prueba contra producción**.
+**Pruebas:** `npm test` — 86 pruebas de lógica pura en `tests/unit/`, 2
+segundos, sin tocar la base.
+
+**Verificación:** `npm run verificar` — comprueba aislamiento entre
+consultorios, IDOR, enrutamiento de WhatsApp, horarios, identidad de acceso,
+bitácora y folios duplicados contra datos REALES. Es de **solo lectura** (ni un
+create, update, delete o transacción), y por eso puede correrse contra
+producción.
+
+**Nunca corras `vitest` contra producción.** Una suite limpia datos entre
+casos; un `deleteMany` mal filtrado en un `afterEach` borra pacientes y
+expedientes. Lo que falta —concurrencia, doble reserva, IDOR por HTTP— necesita
+escribir, y para eso hace falta una base separada.
 
 ---
 
@@ -152,12 +161,12 @@ o el middleware lo manda al login con un 307.
 
 ## Pendientes conocidos
 
-- **Cero pruebas automatizadas.** El riesgo real del proyecto.
-- **Multiconsultorio: a medias.** El aislamiento por `organizationId` ya está en
-  25 modelos y los 23 servicios lo exigen. El enrutamiento de WhatsApp y la
-  suspensión ya se arreglaron (25 ago 2026). Falta: `type`/`status`/`maxUsers`
-  en `Organization`, `SUPER_ADMIN`, `ClinicUser` (hoy un usuario pertenece a un
-  solo consultorio) y RLS. Ver `MULTITENANT.md`.
+- **Pruebas: 86 unitarias + 18 verificaciones.** Falta todo lo que exige
+  escribir: concurrencia, doble reserva, IDOR por HTTP y flujos de interfaz.
+  Necesitan una base de pruebas; esta máquina no tiene Docker ni Postgres local.
+- **Multiconsultorio: funcionando.** Aislamiento verificado con dos
+  consultorios reales. Falta RLS en Postgres como segunda capa
+  (ver `MULTITENANT.md` §7) y los índices compuestos para cuando haya volumen.
 - **Un paciente nuevo no puede agendar por WhatsApp** — escala a recepción.
 - **Verificación de negocio en Meta** pendiente: sin ella no hay número real.
 - **Credenciales por rotar:** token de WhatsApp, App Secret y contraseña de la
@@ -166,11 +175,11 @@ o el middleware lo manda al login con un 307.
 
 ---
 
-## Estado del proyecto (25 ago 2026)
+## Estado del proyecto (30 ago 2026)
 
-**Lo que se hizo hoy: multiconsultorio, primera tanda.** Dos commits en `main`,
-ya desplegados: `7ef43c3` (aislamiento de WhatsApp + suspensión efectiva) y
-`f21896c` (alta de consultorios). Análisis completo en `MULTITENANT.md`.
+**Análisis completo en `MULTITENANT.md`.** El multiconsultorio se hizo en dos
+tandas: 25 ago (aislamiento de WhatsApp, suspensión efectiva, alta por script)
+y 30 ago (panel Master, catálogo, cobranza, códigos de consultorio).
 
 **Hallazgo que reencuadró todo:** Doctovio YA era multi-tenant. `organizationId`
 vive en 25 modelos y los 23 servicios lo exigen como primer parámetro. NO hacía
@@ -183,7 +192,7 @@ habría dejado dos conceptos de tenant compitiendo.
    Ver `lib/whatsapp/routing.ts`.
 2. ~~Login~~ — correo único global + `findUnique`.
 3. ~~Cron de recordatorios~~ — filtra consultorios suspendidos y reparte el
-   lote entre consultorios (26 ago 2026).
+   lote entre consultorios (30 ago 2026).
 
 **Migraciones al día.** `20260825120000_whatsapp_conexiones` y
 `20260825190000_correo_unico_global` aplicadas en producción. Recordatorio:
@@ -273,6 +282,38 @@ Los JSON de alta llevan contraseñas en texto plano y están en `.gitignore`.
 
 ---
 
+### Lo que se hizo el 30 ago 2026
+
+**Panel del Administrador Maestro en `/master`** — Dashboard con KPIs y
+gráficas, Consultorios (alta desde el panel, con pestañas de Resumen, Usuarios,
+Pagos, Actividad y Configuración), Usuarios, Cobranza, Productos y Auditoría.
+`/admin` redirige ahí.
+
+**Catálogo, suscripciones y mensualidades.** El precio vive en `products`
+(`DOCTOVIO_BASE`, 20 USD/mes) y se congela dos veces: al contratar en
+`Subscription` y al emitir en `BillingCycle`.
+
+**Código de consultorio y alias de acceso.** `TRI`, `CON`; usuarios
+`clp.carlos`. El código es inmutable. El correo es obligatorio para todos y el
+alias es una vía adicional de entrada.
+
+**Dos bugs encontrados al validar contra la matriz de procesos, ya corregidos:**
+
+1. *El turno partido se borraba solo.* El editor de horarios agrupaba con
+   `new Map(rows.map(r => [r.weekday, r]))`, que se queda con el último rango
+   del día. Como el alta crea 9-14 y 16-19, el médico abría Configuración, veía
+   solo la tarde, guardaba y perdía la mañana sin aviso.
+2. *Folios que chocan en concurrencia.* Tres copias de `count()+1` con el mismo
+   error, y un comentario que afirmaba falsamente que la transacción bastaba.
+   En READ COMMITTED dos transacciones cuentan lo mismo. Ahora hay un generador
+   único que toma un candado sobre la fila del consultorio antes de contar.
+
+**Verificación contra producción: 18 PASS, 0 FAIL.** Con dos consultorios
+reales: `[CON]` no alcanza ningún paciente, cita ni documento de `[TRI]`, ni
+por listado ni por id directo.
+
+---
+
 ### Lo siguiente, en orden
 
 **1. 🔴 Rotar credenciales.** Token de WhatsApp, App Secret y contraseña de la
@@ -280,23 +321,22 @@ base circularon por un chat. Pendiente desde julio. Mientras sigan vivos, todo
 el blindaje tiene una puerta abierta por detrás. **Antes de meter consultorios
 de terceros.**
 
-**2. 🟡 Pruebas: arrancadas, a medias.** Ya hay 35 en `tests/unit` (vitest),
-solo de lógica pura: edad, IMC, cifrado de secretos, normalización de teléfonos
-y el matcher de opciones del bot. Encontraron un bug real a la primera (ver
-abajo). **Falta lo que más vale: aislamiento entre consultorios**, y eso
-necesita una base de pruebas — no hay Docker ni Postgres local en esta máquina.
-Cuando la haya, van en `tests/integration/` con su propia guarda que verifique
-a qué base apunta antes de escribir.
+**2. 🟡 Lo que las pruebas NO cubren.** 86 unitarias y 18 verificaciones, pero
+todo lo que exige ESCRIBIR sigue sin probarse: concurrencia y doble reserva
+(SCH-04), el candado de folios, IDOR por HTTP (API-01) y los flujos de
+interfaz. Necesitan una base de pruebas donde se pueda ensuciar y limpiar —
+esta máquina no tiene Docker ni Postgres local. Cuando la haya, van en
+`tests/integration/` con guarda propia que verifique a qué base apunta antes de
+escribir una sola fila.
 
-**3. 🟡 Fase 1 restante:** índices compuestos (a 40 consultorios la agenda se
-va a sentir). El resto de la fase 1 ya está: `type` / `status` / `maxUsers`,
-operador de plataforma y panel `/admin` (26 ago 2026).
+**3. 🟡 Índices compuestos.** A 40 consultorios la agenda se va a sentir. Hoy
+no duele: hay dos.
 
 **4. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
 Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la
 ignora y en Railway ese es justo el caso. Detalle en `MULTITENANT.md` §7.
 
-**Bug que encontraron las pruebas (26 ago 2026).** `pick()` en
+**Bug que encontraron las pruebas (30 ago 2026).** `pick()` en
 `machine.ts` estaba declarada `number | null` pero devolvía el `-1` de
 `findIndex`. Consecuencia: las 12 comprobaciones `if (choice === null)` —las
 que repiten el menú cuando el paciente escribe algo que el bot no entiende—
