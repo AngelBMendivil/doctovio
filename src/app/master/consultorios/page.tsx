@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Users, AlertTriangle, Wallet } from "lucide-react";
+import { Building2, Users, AlertTriangle, Wallet, Plus } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth/session";
 import { listClinicsForPlatform, platformSummary, type PaymentState } from "@/lib/services/clinics";
 import { StatCard } from "@/components/ui/stat-card";
@@ -37,11 +37,21 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-navy">Consultorios</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Estado y cobranza de los consultorios de la plataforma.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-navy">Consultorios</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Estado y cobranza de los consultorios de la plataforma.
+          </p>
+        </div>
+
+        <Link
+          href="/master/consultorios/nuevo"
+          className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Nuevo consultorio
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

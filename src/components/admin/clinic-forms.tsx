@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { AlertTriangle } from "lucide-react";
 import {
   setClinicStatusAction,
   updateClinicPlanAction,
@@ -16,7 +18,7 @@ import { Alert } from "@/components/ui/alert";
 import type { ClinicStatus, ClinicType } from "@prisma/client";
 
 /**
- * Formularios del panel de plataforma.
+ * Formularios del detalle de consultorio.
  *
  * React 18: `useFormState` y `useFormStatus` de react-dom. `useActionState` no
  * existe en esta versión.
@@ -39,17 +41,36 @@ function Mensaje({ state }: { state: PlatformState }) {
   return null;
 }
 
-// ---------------------------------------------------------------------------
+const ESTADOS: { value: ClinicStatus; label: string; corta: boolean }[] = [
+  { value: "TRIAL", label: "En prueba — con acceso", corta: false },
+  { value: "ACTIVE", label: "Activo — con acceso", corta: false },
+  { value: "SUSPENDED", label: "Suspendido — sin acceso", corta: true },
+  { value: "CANCELLED", label: "Cancelado — sin acceso", corta: true },
+];
+
+/** Lo que se le advierte al Master antes de cortarle el acceso a alguien. */
+const AVISO: Partial<Record<ClinicStatus, string>> = {
+  SUSPENDED:
+    "Estás por suspender este consultorio. Los usuarios perderán temporalmente el acceso y dejarán de salir sus recordatorios por WhatsApp, pero ninguna información será eliminada. Puede reactivarse en cualquier momento.",
+  CANCELLED:
+    "Estás por cancelar este consultorio. Los usuarios perderán el acceso y se dejarán de generar mensualidades. Toda la información y el historial comercial se conservan, y administrativamente puede reactivarse.",
+};
 
 /**
  * Cambio de estado.
  *
- * Suspender es lo único aquí que le corta el acceso a un consultorio real, así
- * que el aviso de que no se borra nada está a la vista: es la primera duda que
- * salta al hacerlo, y tratándose de expedientes clínicos importa.
+ * Pide confirmación explícita cuando la acción CORTA el acceso. Suspender es lo
+ * único aquí que deja a un consultorio real sin poder trabajar, y el aviso de
+ * que no se borra nada va a la vista: es la primera duda que salta, y
+ * tratándose de expedientes clínicos importa.
  */
 export function EstadoForm({ organizationId, status }: { organizationId: string; status: ClinicStatus }) {
   const [state, action] = useFormState(setClinicStatusAction, initial);
+  const [elegido, setElegido] = useState<ClinicStatus>(status);
+
+  const corta = ESTADOS.find((e) => e.value === elegido)?.corta ?? false;
+  const cambio = elegido !== status;
+  const aviso = corta && cambio ? AVISO[elegido] : null;
 
   return (
     <form action={action} className="space-y-4">
@@ -57,23 +78,43 @@ export function EstadoForm({ organizationId, status }: { organizationId: string;
 
       <div className="space-y-1.5">
         <Label htmlFor="status">Estado</Label>
-        <Select id="status" name="status" defaultValue={status}>
-          <option value="TRIAL">En prueba</option>
-          <option value="ACTIVE">Activo</option>
-          <option value="SUSPENDED">Suspendido — sin acceso</option>
-          <option value="CANCELLED">Cancelado — sin acceso</option>
+        <Select
+          id="status"
+          name="status"
+          value={elegido}
+          onChange={(e) => setElegido(e.target.value as ClinicStatus)}
+        >
+          {ESTADOS.map((e) => (
+            <option key={e.value} value={e.value}>
+              {e.label}
+            </option>
+          ))}
         </Select>
       </div>
 
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Suspender corta el acceso de inmediato, incluidos los recordatorios por
-        WhatsApp. <span className="font-medium text-navy">No se borra nada:</span>{" "}
-        pacientes, expedientes, citas e historial quedan completos y al reactivar
-        todo vuelve como estaba.
-      </p>
+      {aviso ? (
+        <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-amber-900">{aviso}</p>
+            <label className="flex items-center gap-2 text-sm font-medium text-amber-900">
+              <input type="checkbox" name="confirmado" required className="h-4 w-4 rounded border-amber-300" />
+              Entiendo y quiero continuar
+            </label>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          <span className="font-medium text-navy">Nada se borra nunca.</span> Pacientes,
+          expedientes, citas, recetas e historial se conservan completos en cualquier
+          estado, y al reactivar todo vuelve como estaba.
+        </p>
+      )}
 
       <Mensaje state={state} />
-      <Submit>Cambiar estado</Submit>
+      <Submit variant={corta && cambio ? "destructive" : "primary"}>
+        {cambio ? "Cambiar estado" : "Guardar"}
+      </Submit>
     </form>
   );
 }
@@ -101,7 +142,7 @@ export function PlanForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="type">Giro</Label>
+          <Label htmlFor="type">Tipo de consultorio</Label>
           <Select id="type" name="type" defaultValue={type}>
             <option value="MEDICAL">Médico</option>
             <option value="DENTAL">Dental</option>
@@ -114,12 +155,12 @@ export function PlanForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="planName">Plan</Label>
+          <Label htmlFor="planName">Etiqueta del plan</Label>
           <Input id="planName" name="planName" defaultValue={planName ?? ""} placeholder="Básico, Completo…" />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="monthlyFeeMxn">Cuota mensual (MXN)</Label>
+          <Label htmlFor="monthlyFeeMxn">Cuota heredada (MXN)</Label>
           <Input
             id="monthlyFeeMxn"
             name="monthlyFeeMxn"
@@ -132,6 +173,11 @@ export function PlanForm({
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        El precio que se cobra sale de la <span className="font-medium text-navy">suscripción</span>,
+        no de este campo. La cuota en pesos se conserva de antes del catálogo y ya no manda.
+      </p>
+
       <Mensaje state={state} />
       <Submit variant="secondary">Guardar plan</Submit>
     </form>
@@ -141,12 +187,18 @@ export function PlanForm({
 // ---------------------------------------------------------------------------
 
 /**
- * Registro de un pago recibido.
+ * Pago suelto, sin mensualidad de por medio.
  *
- * La captura es manual a propósito: el operador recibe la transferencia y la
- * anota. `periodEnd` es lo que mueve la fecha de cobertura del consultorio.
+ * Lo normal es registrar contra una mensualidad desde Cobranza, que es lo que
+ * mueve el estado del ciclo. Esto queda para casos fuera de esa vía.
  */
-export function PagoForm({ organizationId, sugerido }: { organizationId: string; sugerido: { periodStart: string; periodEnd: string; hoy: string; amount: number | null } }) {
+export function PagoForm({
+  organizationId,
+  sugerido,
+}: {
+  organizationId: string;
+  sugerido: { periodStart: string; periodEnd: string; hoy: string; amount: number | null };
+}) {
   const [state, action] = useFormState(registerPaymentAction, initial);
 
   return (
@@ -155,16 +207,8 @@ export function PagoForm({ organizationId, sugerido }: { organizationId: string;
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="amount">Monto (MXN)</Label>
-          <Input
-            id="amount"
-            name="amount"
-            type="number"
-            min={0}
-            step="0.01"
-            defaultValue={sugerido.amount ?? ""}
-            required
-          />
+          <Label htmlFor="amount">Monto</Label>
+          <Input id="amount" name="amount" type="number" min={0} step="0.01" defaultValue={sugerido.amount ?? ""} required />
         </div>
 
         <div className="space-y-1.5">
@@ -202,12 +246,6 @@ export function PagoForm({ organizationId, sugerido }: { organizationId: string;
         <Label htmlFor="notes">Notas</Label>
         <Textarea id="notes" name="notes" rows={2} />
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        La cobertura del consultorio avanza hasta la fecha de{" "}
-        <span className="font-medium text-navy">Periodo hasta</span>. Registrar
-        un pago de un periodo anterior no la retrocede.
-      </p>
 
       <Mensaje state={state} />
       <Submit>Registrar pago</Submit>

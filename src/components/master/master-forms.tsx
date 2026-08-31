@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
+  createClinicAction,
   createProductAction,
   updateProductAction,
+  subscribeClinicAction,
   generateCyclesAction,
   registerCyclePaymentAction,
   waiveCycleAction,
@@ -36,6 +38,275 @@ function Msg({ state }: { state: MasterState }) {
   if (state.error) return <Alert className="mt-3">{state.error}</Alert>;
   if (state.ok) return <Alert tone="success" className="mt-3">{state.ok}</Alert>;
   return null;
+}
+
+// -------------------------------------------------------------- CONSULTORIOS
+
+export function NewClinicForm({
+  products,
+  hoy,
+}: {
+  products: { id: string; name: string; code: string; price: number; currency: string }[];
+  hoy: string;
+}) {
+  const [state, action] = useFormState(createClinicAction, initial);
+  const [productId, setProductId] = useState(products[0]?.id ?? "");
+  const producto = products.find((p) => p.id === productId);
+
+  return (
+    <form action={action} className="space-y-8">
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Información general
+        </h2>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Nombre comercial *</Label>
+            <Input id="name" name="name" required placeholder="Consultorio Dra. López" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="legalName">Razón social</Label>
+            <Input id="legalName" name="legalName" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="type">Tipo de consultorio</Label>
+            <Select id="type" name="type" defaultValue="MEDICAL">
+              <option value="MEDICAL">Médico</option>
+              <option value="DENTAL">Dental</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="timezone">Zona horaria</Label>
+            <Select id="timezone" name="timezone" defaultValue="America/Mexico_City">
+              <option value="America/Tijuana">Tijuana / Baja California</option>
+              <option value="America/Hermosillo">Hermosillo / Sonora</option>
+              <option value="America/Mazatlan">Mazatlán / Sinaloa</option>
+              <option value="America/Monterrey">Monterrey / Noreste</option>
+              <option value="America/Mexico_City">Ciudad de México / Centro</option>
+              <option value="America/Merida">Mérida / Yucatán</option>
+              <option value="America/Cancun">Cancún / Quintana Roo</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="address">Dirección</Label>
+            <Input id="address" name="address" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="city">Ciudad</Label>
+            <Input id="city" name="city" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="state">Estado</Label>
+            <Input id="state" name="state" />
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Doctor principal
+        </h2>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          Es el primer usuario y queda como administrador del consultorio: puede
+          configurarlo y recetar. El resto del equipo se agrega en el siguiente paso.
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="doctorName">Nombre completo *</Label>
+            <Input id="doctorName" name="doctorName" required placeholder="Dra. Ana López" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">Teléfono</Label>
+            <Input id="phone" name="phone" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Correo *</Label>
+            <Input id="email" name="email" type="email" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Contraseña temporal *</Label>
+            <Input id="password" name="password" type="password" minLength={8} required />
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Información comercial
+        </h2>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="productId">Producto</Label>
+            <Select id="productId" name="productId" value={productId} onChange={(e) => setProductId(e.target.value)}>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.price} {p.currency}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="price">Precio pactado</Label>
+            {/* El precio sale del catálogo. Se puede sobrescribir para un
+                descuento negociado, y ese valor queda congelado en la
+                suscripción. */}
+            <Input
+              id="price"
+              name="price"
+              type="number"
+              min={0}
+              step="0.01"
+              key={productId}
+              defaultValue={producto?.price}
+              placeholder="Del catálogo"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="startedAt">Fecha de inicio</Label>
+            <Input id="startedAt" name="startedAt" type="date" defaultValue={hoy} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="status">Estado inicial</Label>
+            <Select id="status" name="status" defaultValue="TRIAL">
+              <option value="TRIAL">En prueba</option>
+              <option value="ACTIVE">Activo</option>
+            </Select>
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-lg bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
+        Al guardar se crea el consultorio con su configuración, sucursal, usuario,
+        perfil médico y <span className="font-medium text-navy">horario laboral</span>{" "}
+        (lun-vie 9-14 y 16-19, editable después). Sin horario el motor de agenda no
+        ofrece un solo espacio y el consultorio no podría agendar nada.
+      </div>
+
+      <Msg state={state} />
+      <Submit>Crear consultorio</Submit>
+    </form>
+  );
+}
+
+/** Alta de usuario dentro de UN consultorio ya elegido. */
+export function AddUserToClinicForm({ organizationId, disponibles }: { organizationId: string; disponibles: number }) {
+  const [state, action] = useFormState(createUserAction, initial);
+
+  if (disponibles <= 0) {
+    return (
+      <Alert tone="info">
+        Este consultorio ya usó los {" "}
+        <strong>todos los usuarios de su plan</strong>. Sube el tope en la pestaña
+        Configuración antes de agregar otro.
+      </Alert>
+    );
+  }
+
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="u-fullName">Nombre completo *</Label>
+          <Input id="u-fullName" name="fullName" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="u-role">Rol</Label>
+          <Select id="u-role" name="role" defaultValue="ASSISTANT">
+            <option value="DOCTOR">Doctor</option>
+            <option value="ADMIN">Administrativo</option>
+            <option value="ASSISTANT">Secretaria</option>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="u-email">Correo *</Label>
+          <Input id="u-email" name="email" type="email" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="u-password">Contraseña temporal *</Label>
+          <Input id="u-password" name="password" type="password" minLength={8} required />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="u-phone">Teléfono</Label>
+          <Input id="u-phone" name="phone" />
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Quedan {disponibles} lugar(es) en el plan. El correo debe ser único en toda la plataforma.
+      </p>
+
+      <Msg state={state} />
+      <Submit>Agregar usuario</Submit>
+    </form>
+  );
+}
+
+/** Contrata (o cambia) el producto de un consultorio. */
+export function SubscribeForm({
+  organizationId,
+  products,
+  actual,
+}: {
+  organizationId: string;
+  products: { id: string; name: string; code: string; price: number; currency: string }[];
+  actual: string | null;
+}) {
+  const [state, action] = useFormState(subscribeClinicAction, initial);
+  const [productId, setProductId] = useState(actual ?? products[0]?.id ?? "");
+  const producto = products.find((p) => p.id === productId);
+
+  if (products.length === 0) {
+    return <Alert tone="info">No hay productos activos en el catálogo.</Alert>;
+  }
+
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="organizationId" value={organizationId} />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="s-productId">Producto</Label>
+          <Select id="s-productId" name="productId" value={productId} onChange={(e) => setProductId(e.target.value)}>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.price} {p.currency}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="s-price">Precio pactado</Label>
+          <Input
+            id="s-price"
+            name="price"
+            type="number"
+            min={0}
+            step="0.01"
+            key={productId}
+            defaultValue={producto?.price}
+            placeholder="Del catálogo"
+          />
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        El precio queda congelado en la suscripción. Cambiar después el catálogo no
+        le mueve el cobro a este consultorio ni altera sus mensualidades emitidas.
+      </p>
+
+      <Msg state={state} />
+      <Submit variant="secondary">{actual ? "Cambiar producto" : "Contratar"}</Submit>
+    </form>
+  );
 }
 
 // ------------------------------------------------------------------ PRODUCTOS

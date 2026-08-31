@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/auth/session";
+import { createClinic, setClinicStatus, updateClinicPlan } from "@/lib/services/clinics";
 import { createProduct, updateProduct, subscribeClinic } from "@/lib/services/platform-catalog";
 import { generateBillingCycles, registerCyclePayment, waiveCycle } from "@/lib/services/platform-billing";
 import { createUserAsMaster, setUserActive, changeUserRole, moveUserToClinic } from "@/lib/services/platform-users";
 import { resetUserPasswordGlobal } from "@/lib/services/users";
 import { logPlatform } from "@/lib/services/platform-audit";
-import type { BillingFrequency, PaymentMethod, UserRoleName } from "@prisma/client";
+import type { BillingFrequency, ClinicStatus, PaymentMethod, UserRoleName } from "@prisma/client";
 
 /**
  * Acciones del panel Master.
@@ -38,6 +40,93 @@ async function run(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "No se pudo completar la operación." };
   }
+}
+
+// ----------------------------------------------------------- CONSULTORIOS
+
+/**
+ * Alta de consultorio desde el panel.
+ *
+ * Usa el mismo `createClinic()` del script, así que el consultorio queda
+ * operativo de una vez: configuración, sucursal, usuario, perfil médico y
+ * HORARIO LABORAL. Sin ese último el motor de agenda no ofrece un solo espacio
+ * y el consultorio se ve bien pero no puede agendar.
+ *
+ * Después contrata el producto. Si eso falla, el consultorio queda creado sin
+ * suscripción: es recuperable desde su detalle, y prefiero eso a perder el alta
+ * completa por un problema de cobranza.
+ */
+export async function createClinicAction(_p: MasterState, f: FormData): Promise<MasterState> {
+  let nuevoId = "";
+
+  const r = await run(async (masterUserId) => {
+    const clinic = await createClinic({
+      name: str(f.get("name")),
+      legalName: str(f.get("legalName")) || undefined,
+      branch: {
+        address: str(f.get("address")) || undefined,
+        city: str(f.get("city")) || undefined,
+        state: str(f.get("state")) || undefined,
+        phone: str(f.get("phone")) || undefined,
+      },
+      // El doctor principal queda como ADMIN: en un consultorio de un solo
+      // médico, él es quien configura. La matriz de rbac.ts le permite recetar
+      // igual que a un DOCTOR. Los demás usuarios se agregan después.
+      admin: {
+        email: str(f.get("email")),
+        password: str(f.get("password")),
+        fullName: str(f.get("doctorName")),
+        phone: str(f.get("phone")) || undefined,
+      },
+      settings: { timezone: str(f.get("timezone")) || "America/Mexico_City" },
+    });
+
+    nuevoId = clinic.organizationId;
+
+    await setClinicStatus(clinic.organizationId, (str(f.get("status")) || "TRIAL") as ClinicStatus);
+
+    const tipo = str(f.get("type"));
+    if (tipo === "DENTAL") {
+      await updateClinicPlan(clinic.organizationId, { type: "DENTAL" });
+    }
+
+    await logPlatform({
+      masterUserId,
+      action: "CREATE",
+      entity: "clinic",
+      entityId: clinic.organizationId,
+      organizationId: clinic.organizationId,
+      metadata: { name: clinic.name, admin: clinic.adminEmail },
+    });
+
+    const productId = str(f.get("productId"));
+    if (productId) {
+      const precio = str(f.get("price"));
+      const s = await subscribeClinic({
+        organizationId: clinic.organizationId,
+        productId,
+        price: precio === "" ? undefined : Number(precio),
+        startedAt: str(f.get("startedAt")) ? new Date(`${str(f.get("startedAt"))}T12:00:00`) : undefined,
+      });
+
+      await logPlatform({
+        masterUserId,
+        action: "CREATE",
+        entity: "subscription",
+        entityId: s.id,
+        organizationId: clinic.organizationId,
+        metadata: { product: s.product.code, price: s.price },
+      });
+    }
+
+    return `"${clinic.name}" creado.`;
+  }, ["/master/consultorios", "/master"]);
+
+  // Al detalle, en la pestaña de usuarios: lo siguiente es dar de alta al
+  // resto del equipo.
+  if (r.ok && nuevoId) redirect(`/master/consultorios/${nuevoId}?tab=usuarios`);
+
+  return r;
 }
 
 // --------------------------------------------------------------- PRODUCTOS
