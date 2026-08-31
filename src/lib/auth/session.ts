@@ -11,9 +11,8 @@ export type SessionPayload = {
   organizationId: string;
   role: UserRoleName;
   fullName: string;
-  /** Nulo en usuarios secundarios, que entran con `username`. */
-  email: string | null;
-  /** `clp.carlos`. Nulo en el usuario principal, que entra con su correo. */
+  email: string;
+  /** Alias corto `clp.carlos`, si tiene. El login acepta correo o alias. */
   username?: string | null;
   /**
    * NO viaja en el token: lo agrega requireSession() al revalidar contra la

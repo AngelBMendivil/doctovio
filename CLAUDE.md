@@ -234,11 +234,15 @@ Va dentro del nombre de acceso de sus usuarios (`clp.carlos`), así que
 cambiarlo dejaría a esa gente sin poder entrar. Se define UNA vez, al dar de
 alta; ninguna pantalla lo edita después, ni el Master.
 
-**El login acepta correo O nombre de usuario.** El principal entra con su
-correo, los secundarios con `clp.carlos`. Por eso el input del login es
-`type="text"` y NO `type="email"`: con email el navegador rechaza `clp.carlos`
-por no llevar arroba y el formulario ni siquiera se envía. `User.email` es
-opcional y la base exige que exista correo o usuario (`users_login_check`).
+**Todo usuario necesita correo**, incluidos los secundarios: sin él no hay a
+dónde mandar el restablecimiento de contraseña ni los avisos, y una cuenta que
+solo se recupera pidiéndole al Master que la toque a mano no es recuperable de
+verdad.
+
+**El alias `clp.carlos` es una vía ADICIONAL de acceso, no un sustituto.** El
+login acepta correo o alias. Por eso el input del login es `type="text"` y NO
+`type="email"`: con email el navegador rechaza `clp.carlos` por no llevar
+arroba y el formulario ni siquiera se envía.
 
 **El rol NO va en el nombre de usuario.** Si la secretaria pasa a
 administrativa conserva `clp.carlos` y solo cambia `primaryRole`.

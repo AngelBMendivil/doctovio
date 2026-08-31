@@ -710,21 +710,25 @@ model User {
   id             String       @id @default(cuid())
   organizationId String       @map("organization_id")
 
-  /// Correo. OPCIONAL desde que existen los usuarios secundarios: la
-  /// secretaria de un consultorio entra con `clp.carlos` y puede no tener
-  /// correo propio. El usuario principal SÍ lo usa como acceso.
-  email          String?
-
-  /// Nombre de acceso de los usuarios secundarios: `clp.carlos`.
+  /// Correo. OBLIGATORIO para todos, incluidos los secundarios.
   ///
-  /// INMUTABLE, ni siquiera desde el panel Master. Es lo que la persona teclea
-  /// todos los días; cambiárselo la deja fuera sin aviso.
+  /// Es la identidad real de la persona: sin correo no hay a dónde mandarle el
+  /// restablecimiento de contraseña ni los avisos, y una cuenta que solo se
+  /// puede recuperar pidiéndole al Master que la toque a mano no es
+  /// recuperable de verdad.
+  /// (la unicidad la declara el `@@unique([email])` de abajo)
+  email          String
+
+  /// Alias corto de acceso: `clp.carlos`. Opcional.
+  ///
+  /// El login acepta los dos: el correo siempre funciona, y quien tenga alias
+  /// puede entrar con él, que es bastante más rápido de teclear todos los días.
+  ///
+  /// INMUTABLE, ni siquiera desde el panel Master: es lo que la persona teclea
+  /// a diario y cambiárselo la deja fuera sin aviso.
   ///
   /// NO lleva el rol adentro a propósito: si la secretaria pasa a
   /// administrativa conserva `clp.carlos` y solo cambia `primaryRole`.
-  ///
-  /// La base exige que exista al menos uno de los dos, correo o usuario
-  /// (restricción `users_login_check`).
   username       String?      @unique
 
   passwordHash   String       @map("password_hash")

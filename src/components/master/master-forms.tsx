@@ -301,8 +301,8 @@ export function AddUserToClinicForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="u-email">Correo</Label>
-          <Input id="u-email" name="email" type="email" placeholder="Opcional" />
+          <Label htmlFor="u-email">Correo *</Label>
+          <Input id="u-email" name="email" type="email" required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="u-password">Contraseña temporal *</Label>
@@ -315,11 +315,11 @@ export function AddUserToClinicForm({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Quedan {disponibles} lugar(es) en el plan. Entrará con{" "}
+        Quedan {disponibles} lugar(es) en el plan. Podrá entrar con{" "}
         <code className="rounded bg-muted px-1 py-0.5 font-mono text-navy">
           {nombre ? suggestUsername(clinicCode, nombre) : `${clinicCode.toLowerCase()}.nombre`}
         </code>
-        , no con su correo. El correo es opcional y solo sirve para avisos.
+        , o con su correo. Los dos funcionan para entrar.
       </p>
 
       <Msg state={state} />

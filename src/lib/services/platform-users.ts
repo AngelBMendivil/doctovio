@@ -61,24 +61,23 @@ export async function listAllUsers(filter: { organizationId?: string; role?: Use
  */
 export async function createUserAsMaster(params: {
   organizationId: string;
-  /** Opcional: los usuarios secundarios entran con su nombre de acceso. */
-  email?: string;
+  /** Obligatorio: sin correo no hay forma de recuperar la cuenta. */
+  email: string;
   password: string;
   fullName: string;
   phone?: string;
   role: UserRoleName;
 }) {
-  const email = params.email?.toLowerCase().trim() || null;
+  const email = params.email.toLowerCase().trim();
 
+  if (!email) throw new Error("El correo es obligatorio.");
   if (params.password.length < 8) {
     throw new Error("La contraseña debe tener al menos 8 caracteres.");
   }
 
-  if (email) {
-    const existe = await db.user.findUnique({ where: { email } });
-    if (existe) {
-      throw new Error(`El correo ${email} ya está en uso en la plataforma.`);
-    }
+  const existe = await db.user.findUnique({ where: { email } });
+  if (existe) {
+    throw new Error(`El correo ${email} ya está en uso en la plataforma.`);
   }
 
   const org = await db.organization.findUniqueOrThrow({
@@ -93,8 +92,9 @@ export async function createUserAsMaster(params: {
     );
   }
 
-  // Nombre de acceso: clp.carlos. Se genera SIEMPRE, tenga correo o no — es
-  // más corto de teclear y es lo que la gente del consultorio va a usar.
+  // Alias de acceso: clp.carlos. Se genera siempre, ADEMÁS del correo. El
+  // login acepta los dos, y el alias es bastante más rápido de teclear todos
+  // los días que un correo completo.
   //
   // Se resuelve el choque contra los que ya existen: dos Carlos en el mismo
   // consultorio dan clp.carlos y clp.carlos2.
