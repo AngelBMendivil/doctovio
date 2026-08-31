@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import { pushAppointment } from "@/lib/services/calendar-sync";
 import { scheduleReminders, cancelReminders } from "@/lib/services/reminders";
+import { generateFolio } from "@/lib/utils/folio";
 import type { AppointmentChannel, AppointmentType, Prisma } from "@prisma/client";
 
 /**
@@ -77,12 +78,6 @@ export function durationFor(type: AppointmentType, rules: SchedulingRules): numb
 }
 
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && aEnd > bStart;
-
-/** Folio legible y estable: DOC-000123. */
-async function nextFolio(tx: Prisma.TransactionClient, organizationId: string): Promise<string> {
-  const count = await tx.appointment.count({ where: { organizationId, folio: { not: null } } });
-  return `DOC-${String(count + 1).padStart(6, "0")}`;
-}
 
 /** Rangos ocupados del médico en una ventana: citas, bloqueos y reservas vivas. */
 async function busyRanges(
@@ -292,7 +287,7 @@ export async function crearCita(
   }
 
   const appointment = await db.$transaction(async (tx) => {
-    const folio = await nextFolio(tx, organizationId);
+    const folio = await generateFolio(tx, organizationId, "DOC");
     const created = await tx.appointment.create({
       data: {
         organizationId,

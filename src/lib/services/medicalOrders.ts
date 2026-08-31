@@ -1,16 +1,11 @@
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import type { CreateMedicalOrderInput } from "@/lib/validations/medicalOrder";
-
-async function nextOrderFolio(tx: Parameters<Parameters<typeof db.$transaction>[0]>[0], organizationId: string) {
-  const year = new Date().getFullYear();
-  const count = await tx.medicalOrder.count({ where: { organizationId, folio: { startsWith: `OM-${year}-` } } });
-  return `OM-${year}-${String(count + 1).padStart(6, "0")}`;
-}
+import { generateFolio } from "@/lib/utils/folio";
 
 export async function issueMedicalOrder(organizationId: string, doctorId: string, input: CreateMedicalOrderInput) {
   const order = await db.$transaction(async (tx) => {
-    const folio = await nextOrderFolio(tx, organizationId);
+    const folio = await generateFolio(tx, organizationId, "OM");
     return tx.medicalOrder.create({
       data: {
         organizationId,

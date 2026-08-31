@@ -1,15 +1,8 @@
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import { generateSecureToken } from "@/lib/utils/tokens";
+import { generateFolio } from "@/lib/utils/folio";
 import type { CreatePrescriptionInput } from "@/lib/validations/prescription";
-
-async function nextPrescriptionFolio(tx: Parameters<Parameters<typeof db.$transaction>[0]>[0], organizationId: string) {
-  const year = new Date().getFullYear();
-  const count = await tx.prescription.count({
-    where: { organizationId, folio: { startsWith: `RX-${year}-` } },
-  });
-  return `RX-${year}-${String(count + 1).padStart(6, "0")}`;
-}
 
 /**
  * Crea y emite una receta en una sola transacción (folio + items).
@@ -18,7 +11,7 @@ async function nextPrescriptionFolio(tx: Parameters<Parameters<typeof db.$transa
  */
 export async function issuePrescription(organizationId: string, doctorId: string, input: CreatePrescriptionInput) {
   const prescription = await db.$transaction(async (tx) => {
-    const folio = await nextPrescriptionFolio(tx, organizationId);
+    const folio = await generateFolio(tx, organizationId, "RX");
     return tx.prescription.create({
       data: {
         organizationId,
@@ -63,7 +56,7 @@ export async function supersedePrescription(
 ) {
   return db.$transaction(async (tx) => {
     const original = await tx.prescription.findFirstOrThrow({ where: { id: originalId, organizationId } });
-    const folio = await nextPrescriptionFolio(tx, organizationId);
+    const folio = await generateFolio(tx, organizationId, "RX");
 
     const next = await tx.prescription.create({
       data: {

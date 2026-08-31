@@ -5,6 +5,9 @@ import { requireSession } from "@/lib/auth/session";
 import { assertPermission } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 
+/** Para que los mensajes de error digan de qué día hablan. */
+const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
 export type ActionState = { ok: boolean; message: string } | null;
 
 const toMinutes = (hhmm: string): number | null => {
@@ -38,15 +41,42 @@ export async function saveDoctorScheduleAction(_prev: ActionState, formData: For
     for (let weekday = 0; weekday <= 6; weekday++) {
       if (formData.get(`active_${weekday}`) !== "on") continue;
 
+      const dia = DAYS[weekday];
+
       const start = toMinutes(String(formData.get(`start_${weekday}`) || ""));
       const end = toMinutes(String(formData.get(`end_${weekday}`) || ""));
       if (start === null || end === null) {
         return { ok: false, message: "Revisa los horarios: usa el formato de 24 horas, por ejemplo 09:00." };
       }
       if (end <= start) {
-        return { ok: false, message: "La hora de salida debe ser posterior a la de entrada." };
+        return { ok: false, message: `${dia}: la hora de salida debe ser posterior a la de entrada.` };
       }
       rows.push({ weekday, startMinute: start, endMinute: end });
+
+      // Segundo turno (comida de por medio). Opcional: si viene vacío,
+      // simplemente ese día tiene un solo rango.
+      const raw2Start = String(formData.get(`start_${weekday}_2`) || "");
+      const raw2End = String(formData.get(`end_${weekday}_2`) || "");
+      if (!raw2Start && !raw2End) continue;
+
+      const start2 = toMinutes(raw2Start);
+      const end2 = toMinutes(raw2End);
+      if (start2 === null || end2 === null) {
+        return { ok: false, message: `${dia}: completa las dos horas del segundo turno, o déjalo vacío.` };
+      }
+      if (end2 <= start2) {
+        return { ok: false, message: `${dia}: en el segundo turno la salida debe ser posterior a la entrada.` };
+      }
+      // Traslape entre los dos turnos del mismo día: con rangos encimados el
+      // motor de agenda ofrecería el mismo espacio dos veces.
+      if (start2 < end) {
+        return {
+          ok: false,
+          message: `${dia}: el segundo turno debe empezar después de que termine el primero.`,
+        };
+      }
+
+      rows.push({ weekday, startMinute: start2, endMinute: end2 });
     }
 
     await db.$transaction(async (tx) => {
