@@ -17,6 +17,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "consultorio": "tsx scripts/consultorio.ts",
     "test": "vitest run",
+    "verificar": "tsx scripts/verificar-aislamiento.ts",
     "test:watch": "vitest",
     "postinstall": "prisma generate"
   },
