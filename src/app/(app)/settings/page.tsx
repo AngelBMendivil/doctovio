@@ -225,7 +225,7 @@ export default async function SettingsPage() {
                   </div>
                   <div>
                     <Label>Correo</Label>
-                    <Input defaultValue={u.email} disabled />
+                    <Input defaultValue={u.email ?? u.username ?? ""} disabled />
                     <p className="mt-1 text-xs text-muted-foreground">El correo no se puede modificar.</p>
                   </div>
                   <div>

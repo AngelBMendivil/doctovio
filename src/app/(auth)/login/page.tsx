@@ -76,7 +76,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold tracking-tight">Iniciar sesión</h1>
           <p className="mt-1.5 text-sm text-muted-foreground lg:hidden">{TAGLINE}</p>
           <p className="mt-1.5 hidden text-sm text-muted-foreground lg:block">
-            Ingresa con tu correo y contraseña.
+            Ingresa con tu correo o tu usuario.
           </p>
 
           <div className="mt-7 rounded-xl border border-border bg-card p-6 shadow-card sm:p-7">
@@ -85,14 +85,17 @@ export default function LoginPage() {
 
               <div>
                 <Label htmlFor="email" required>
-                  Correo electrónico
+                  Correo o usuario
                 </Label>
+                {/* type="text", NO "email": el navegador rechazaria
+                    `clp.carlos` por no llevar arroba y el formulario no se
+                    enviaria siquiera. autoComplete="username" cubre los dos. */}
                 <Input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="doctor@consultorio.com"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="doctor@consultorio.com  ·  clp.carlos"
                   error={!!state?.error}
                   required
                 />

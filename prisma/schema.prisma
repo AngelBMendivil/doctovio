@@ -384,6 +384,13 @@ enum ClinicStatus {
 
 model Organization {
   id        String   @id @default(cuid())
+  /// Código corto y permanente del consultorio: CLP, DSO, CMV.
+  ///
+  /// INMUTABLE. Va dentro del nombre de acceso de cada usuario secundario
+  /// (`clp.carlos`), así que cambiarlo dejaría a esa gente sin poder entrar.
+  /// Por eso NO cambia aunque se renombre el consultorio, y ninguna pantalla
+  /// permite editarlo después del alta.
+  code      String   @unique
   name      String
   legalName String?  @map("legal_name")
   logoUrl   String?  @map("logo_url")
@@ -702,7 +709,24 @@ model OrganizationSettings {
 model User {
   id             String       @id @default(cuid())
   organizationId String       @map("organization_id")
-  email          String
+
+  /// Correo. OPCIONAL desde que existen los usuarios secundarios: la
+  /// secretaria de un consultorio entra con `clp.carlos` y puede no tener
+  /// correo propio. El usuario principal SÍ lo usa como acceso.
+  email          String?
+
+  /// Nombre de acceso de los usuarios secundarios: `clp.carlos`.
+  ///
+  /// INMUTABLE, ni siquiera desde el panel Master. Es lo que la persona teclea
+  /// todos los días; cambiárselo la deja fuera sin aviso.
+  ///
+  /// NO lleva el rol adentro a propósito: si la secretaria pasa a
+  /// administrativa conserva `clp.carlos` y solo cambia `primaryRole`.
+  ///
+  /// La base exige que exista al menos uno de los dos, correo o usuario
+  /// (restricción `users_login_check`).
+  username       String?      @unique
+
   passwordHash   String       @map("password_hash")
   fullName       String       @map("full_name")
   phone          String?

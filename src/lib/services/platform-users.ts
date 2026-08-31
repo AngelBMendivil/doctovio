@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { suggestUsername, resolveUsername } from "@/lib/utils/clinic-code";
 import type { Prisma, UserRoleName, UserStatus } from "@prisma/client";
 
 /**
@@ -35,6 +36,7 @@ export async function listAllUsers(filter: { organizationId?: string; role?: Use
       id: true,
       fullName: true,
       email: true,
+      username: true,
       primaryRole: true,
       status: true,
       isActive: true,
@@ -59,26 +61,29 @@ export async function listAllUsers(filter: { organizationId?: string; role?: Use
  */
 export async function createUserAsMaster(params: {
   organizationId: string;
-  email: string;
+  /** Opcional: los usuarios secundarios entran con su nombre de acceso. */
+  email?: string;
   password: string;
   fullName: string;
   phone?: string;
   role: UserRoleName;
 }) {
-  const email = params.email.toLowerCase().trim();
+  const email = params.email?.toLowerCase().trim() || null;
 
   if (params.password.length < 8) {
     throw new Error("La contraseña debe tener al menos 8 caracteres.");
   }
 
-  const existe = await db.user.findUnique({ where: { email } });
-  if (existe) {
-    throw new Error(`El correo ${email} ya está en uso en la plataforma.`);
+  if (email) {
+    const existe = await db.user.findUnique({ where: { email } });
+    if (existe) {
+      throw new Error(`El correo ${email} ya está en uso en la plataforma.`);
+    }
   }
 
   const org = await db.organization.findUniqueOrThrow({
     where: { id: params.organizationId },
-    select: { name: true, maxUsers: true, _count: { select: { users: true } } },
+    select: { code: true, name: true, maxUsers: true, _count: { select: { users: true } } },
   });
 
   if (org._count.users >= org.maxUsers) {
@@ -88,6 +93,23 @@ export async function createUserAsMaster(params: {
     );
   }
 
+  // Nombre de acceso: clp.carlos. Se genera SIEMPRE, tenga correo o no — es
+  // más corto de teclear y es lo que la gente del consultorio va a usar.
+  //
+  // Se resuelve el choque contra los que ya existen: dos Carlos en el mismo
+  // consultorio dan clp.carlos y clp.carlos2.
+  const base = suggestUsername(org.code, params.fullName);
+  if (!base) {
+    throw new Error("El nombre no tiene letras suficientes para generar un usuario.");
+  }
+
+  const ocupados = new Set(
+    (await db.user.findMany({ where: { username: { startsWith: `${org.code.toLowerCase()}.` } }, select: { username: true } }))
+      .map((u) => u.username)
+      .filter((u): u is string => Boolean(u))
+  );
+  const username = resolveUsername(base, ocupados);
+
   const passwordHash = await hashPassword(params.password);
 
   return db.$transaction(async (tx) => {
@@ -95,6 +117,7 @@ export async function createUserAsMaster(params: {
       data: {
         organizationId: params.organizationId,
         email,
+        username,
         passwordHash,
         fullName: params.fullName.trim(),
         phone: params.phone?.trim() || null,

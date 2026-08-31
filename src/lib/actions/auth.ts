@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { findUserByEmailGlobal } from "@/lib/services/users";
+import { findUserByLogin } from "@/lib/services/users";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { logAudit } from "@/lib/services/audit";
@@ -10,14 +10,16 @@ import { db } from "@/lib/db";
 export type LoginState = { error?: string };
 
 export async function loginAction(_prevState: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") || "").trim();
+  // Acepta correo o nombre de acceso: el usuario principal entra con su
+  // correo y los secundarios con `clp.carlos`.
+  const identifier = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
 
-  if (!email || !password) {
-    return { error: "Correo y contraseña son obligatorios." };
+  if (!identifier || !password) {
+    return { error: "Usuario y contraseña son obligatorios." };
   }
 
-  const user = await findUserByEmailGlobal(email);
+  const user = await findUserByLogin(identifier);
   if (!user) {
     return { error: "Credenciales inválidas." };
   }
@@ -37,6 +39,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     role: user.primaryRole,
     fullName: user.fullName,
     email: user.email,
+    username: user.username,
   });
 
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

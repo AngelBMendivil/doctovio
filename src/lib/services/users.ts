@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { looksLikeEmail } from "@/lib/utils/clinic-code";
 import type { UserRoleName } from "@prisma/client";
 
 export async function listUsers(organizationId: string) {
@@ -170,4 +171,24 @@ export async function findUserByEmailGlobal(email: string) {
     where: { email: email.toLowerCase().trim() },
   });
   return user;
+}
+
+/**
+ * Busca por correo O por nombre de acceso. La usa el login.
+ *
+ * El usuario principal de cada consultorio entra con su correo; los secundarios
+ * con `clp.carlos`. Se distingue por la arroba: un nombre de acceso nunca la
+ * lleva.
+ *
+ * Sigue siendo `findUnique` en los dos caminos — ambas columnas son únicas a
+ * nivel plataforma. Nada de `findFirst` aquí: es exactamente el bug que ya nos
+ * mordió tres veces.
+ */
+export async function findUserByLogin(identifier: string) {
+  const id = identifier.toLowerCase().trim();
+  if (!id) return null;
+
+  return looksLikeEmail(id)
+    ? db.user.findUnique({ where: { email: id } })
+    : db.user.findUnique({ where: { username: id } });
 }

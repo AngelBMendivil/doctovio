@@ -86,6 +86,7 @@ export default async function ClinicDetailPage({
           <h1 className="text-2xl font-semibold text-navy">{c.name}</h1>
           <Badge tone={estado.tone}>{estado.text}</Badge>
           <Badge tone="default">{c.type === "DENTAL" ? "Dental" : "Médico"}</Badge>
+          <code className="rounded bg-muted px-2 py-1 font-mono text-sm text-navy">{c.code}</code>
         </div>
 
         <p className="mt-1 text-sm text-muted-foreground">
@@ -173,7 +174,7 @@ export default async function ClinicDetailPage({
                 <thead className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium">Nombre</th>
-                    <th className="px-4 py-3 font-medium">Correo</th>
+                    <th className="px-4 py-3 font-medium">Acceso</th>
                     <th className="px-4 py-3 font-medium">Estado</th>
                     <th className="px-4 py-3 font-medium">Último acceso</th>
                     <th className="px-4 py-3 font-medium">Acciones</th>
@@ -188,7 +189,16 @@ export default async function ClinicDetailPage({
                         </span>
                         <div className="text-xs text-muted-foreground">{ROL[u.primaryRole]}</div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">
+                        {u.username && (
+                          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[12px] text-navy">
+                            {u.username}
+                          </code>
+                        )}
+                        {u.email && (
+                          <div className="text-xs text-muted-foreground">{u.email}</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <Badge tone={u.isActive ? "success" : "default"}>
                           {u.isActive ? "Activo" : "Inactivo"}
@@ -219,7 +229,7 @@ export default async function ClinicDetailPage({
               <CardDescription>Doctor, administrativo o secretaria de este consultorio.</CardDescription>
             </CardHeader>
             <CardContent>
-              <AddUserToClinicForm organizationId={c.id} disponibles={c.maxUsers - activos} />
+              <AddUserToClinicForm organizationId={c.id} clinicCode={c.code} disponibles={c.maxUsers - activos} />
             </CardContent>
           </Card>
         </div>

@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { STATES_BY_COUNTRY } from "@/lib/constants/locations";
+import { suggestClinicCode, suggestUsername } from "@/lib/utils/clinic-code";
 
 /** React 18: useFormState / useFormStatus. `useActionState` no existe aquí. */
 const initial: MasterState = {};
@@ -54,6 +55,12 @@ export function NewClinicForm({
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const producto = products.find((p) => p.id === productId);
 
+  // El código se sugiere del nombre mientras se escribe, pero deja de
+  // seguirlo en cuanto alguien lo edita a mano: si no, sobrescribiría lo que
+  // el operador acaba de teclear.
+  const [code, setCode] = useState("");
+  const [codeTocado, setCodeTocado] = useState(false);
+
   return (
     <form action={action} className="space-y-8">
       <section className="space-y-4">
@@ -64,9 +71,41 @@ export function NewClinicForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="name">Nombre comercial *</Label>
-            <Input id="name" name="name" required placeholder="Consultorio Dra. López" />
+            <Input
+              id="name"
+              name="name"
+              required
+              placeholder="Clínica López"
+              onChange={(e) => {
+                if (!codeTocado) setCode(suggestClinicCode(e.target.value));
+              }}
+            />
           </div>
+
           <div className="space-y-1.5">
+            <Label htmlFor="code">Código *</Label>
+            <Input
+              id="code"
+              name="code"
+              required
+              value={code}
+              maxLength={4}
+              className="font-mono uppercase"
+              placeholder="CLP"
+              onChange={(e) => {
+                setCodeTocado(true);
+                setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Se sugiere del nombre y puedes ajustarlo.{" "}
+              <span className="font-medium text-navy">Esta es la única oportunidad:</span>{" "}
+              después queda congelado, porque va dentro del usuario de cada
+              persona del consultorio ({code ? code.toLowerCase() : "clp"}.carlos).
+            </p>
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="legalName">Razón social</Label>
             <Input id="legalName" name="legalName" />
           </div>
@@ -221,8 +260,18 @@ export function NewClinicForm({
 }
 
 /** Alta de usuario dentro de UN consultorio ya elegido. */
-export function AddUserToClinicForm({ organizationId, disponibles }: { organizationId: string; disponibles: number }) {
+export function AddUserToClinicForm({
+  organizationId,
+  clinicCode,
+  disponibles,
+}: {
+  organizationId: string;
+  clinicCode: string;
+  disponibles: number;
+}) {
   const [state, action] = useFormState(createUserAction, initial);
+  // Se muestra el usuario que le va a tocar mientras se escribe el nombre.
+  const [nombre, setNombre] = useState("");
 
   if (disponibles <= 0) {
     return (
@@ -241,7 +290,7 @@ export function AddUserToClinicForm({ organizationId, disponibles }: { organizat
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="u-fullName">Nombre completo *</Label>
-          <Input id="u-fullName" name="fullName" required />
+          <Input id="u-fullName" name="fullName" required onChange={(e) => setNombre(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="u-role">Rol</Label>
@@ -252,8 +301,8 @@ export function AddUserToClinicForm({ organizationId, disponibles }: { organizat
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="u-email">Correo *</Label>
-          <Input id="u-email" name="email" type="email" required />
+          <Label htmlFor="u-email">Correo</Label>
+          <Input id="u-email" name="email" type="email" placeholder="Opcional" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="u-password">Contraseña temporal *</Label>
@@ -266,7 +315,11 @@ export function AddUserToClinicForm({ organizationId, disponibles }: { organizat
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Quedan {disponibles} lugar(es) en el plan. El correo debe ser único en toda la plataforma.
+        Quedan {disponibles} lugar(es) en el plan. Entrará con{" "}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-navy">
+          {nombre ? suggestUsername(clinicCode, nombre) : `${clinicCode.toLowerCase()}.nombre`}
+        </code>
+        , no con su correo. El correo es opcional y solo sirve para avisos.
       </p>
 
       <Msg state={state} />

@@ -8,6 +8,7 @@ async function main() {
 
   const org = await db.organization.create({
     data: {
+      code: "DEM",
       name: "Consultorio Demo",
       legalName: "Consultorio Demo S.C.",
       settings: {

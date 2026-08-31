@@ -108,7 +108,8 @@ export default async function AdminPage() {
                       <Link href={`/master/consultorios/${c.id}`} className="font-medium text-navy hover:text-primary">
                         {c.name}
                       </Link>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-navy">{c.code}</code>
                         {c.type === "DENTAL" ? "Dental" : "Médico"}
                       </div>
                     </td>

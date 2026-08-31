@@ -67,7 +67,7 @@ export default async function UsuariosPage({
             <thead className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Nombre</th>
-                <th className="px-4 py-3 font-medium">Correo</th>
+                <th className="px-4 py-3 font-medium">Acceso</th>
                 <th className="px-4 py-3 font-medium">Consultorio</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium">Último acceso</th>
@@ -85,7 +85,12 @@ export default async function UsuariosPage({
                     )}
                     <div className="text-xs text-muted-foreground">{ROL[u.primaryRole]}</div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                  <td className="px-4 py-3">
+                    {u.username && (
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[12px] text-navy">{u.username}</code>
+                    )}
+                    {u.email && <div className="text-xs text-muted-foreground">{u.email}</div>}
+                  </td>
                   <td className="px-4 py-3">
                     <Link href={`/master/consultorios/${u.organization.id}`} className="text-muted-foreground hover:text-primary">
                       {u.organization.name}

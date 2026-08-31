@@ -11,7 +11,10 @@ export type SessionPayload = {
   organizationId: string;
   role: UserRoleName;
   fullName: string;
-  email: string;
+  /** Nulo en usuarios secundarios, que entran con `username`. */
+  email: string | null;
+  /** `clp.carlos`. Nulo en el usuario principal, que entra con su correo. */
+  username?: string | null;
   /**
    * NO viaja en el token: lo agrega requireSession() al revalidar contra la
    * base. Si estuviera firmado en el JWT quedaría congelado 7 días y volvería

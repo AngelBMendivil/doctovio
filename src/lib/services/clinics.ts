@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { suggestClinicCode, resolveClinicCode, isValidClinicCode } from "@/lib/utils/clinic-code";
 import type { UserRoleName, ClinicStatus, ClinicType, PaymentMethod } from "@prisma/client";
 
 /**
@@ -28,6 +29,11 @@ export type CreateClinicInput = {
   /** Nombre comercial del consultorio. */
   name: string;
   legalName?: string;
+  /**
+   * Codigo corto. Sin el se sugiere a partir del nombre.
+   * Es la UNICA oportunidad de definirlo: despues queda congelado.
+   */
+  code?: string;
   /** Datos de la sucursal principal. */
   branch?: {
     name?: string;
@@ -128,6 +134,25 @@ async function assertWhatsappAvailable(provider: string, instanceId: string) {
   }
 }
 
+/**
+ * Asigna el código del consultorio.
+ *
+ * Se resuelve el choque leyendo los códigos ya ocupados. Con decenas de
+ * consultorios, traerlos todos es más barato y más simple que un bucle de
+ * reintentos contra la base.
+ */
+export async function assignClinicCode(nameOrCode: string, esCodigoManual = false): Promise<string> {
+  const base = esCodigoManual ? nameOrCode.toUpperCase().trim() : suggestClinicCode(nameOrCode);
+
+  if (!base) throw new Error("No se pudo generar un código a partir del nombre. Escríbelo a mano.");
+  if (esCodigoManual && !isValidClinicCode(base)) {
+    throw new Error("El código debe ser de 2 a 4 letras mayúsculas, opcionalmente con un número.");
+  }
+
+  const ocupados = new Set((await db.organization.findMany({ select: { code: true } })).map((o) => o.code));
+  return resolveClinicCode(base, ocupados);
+}
+
 export async function createClinic(input: CreateClinicInput) {
   const adminEmail = normalizeEmail(input.admin.email);
   const doctorEmail = input.doctor ? normalizeEmail(input.doctor.email) : null;
@@ -144,9 +169,14 @@ export async function createClinic(input: CreateClinicInput) {
   const adminHash = await hashPassword(input.admin.password);
   const doctorHash = input.doctor ? await hashPassword(input.doctor.password) : null;
 
+  // Fuera de la transaccion: consulta los codigos ocupados y no tiene por que
+  // mantenerla abierta mientras tanto.
+  const code = await assignClinicCode(input.code ?? input.name, Boolean(input.code));
+
   return db.$transaction(async (tx) => {
     const organization = await tx.organization.create({
       data: {
+        code,
         name: input.name,
         legalName: input.legalName,
         isActive: true,
@@ -247,6 +277,7 @@ export async function createClinic(input: CreateClinicInput) {
 
     return {
       organizationId: organization.id,
+      code: organization.code,
       name: organization.name,
       branchId: branch.id,
       adminId: admin.id,
@@ -423,6 +454,7 @@ export async function listClinicsForPlatform() {
     orderBy: [{ status: "asc" }, { name: "asc" }],
     select: {
       id: true,
+      code: true,
       name: true,
       type: true,
       status: true,
@@ -442,6 +474,7 @@ export async function listClinicsForPlatform() {
     const pago = paymentState(o.paidUntil);
     return {
       id: o.id,
+      code: o.code,
       name: o.name,
       type: o.type,
       status: o.status,
@@ -522,6 +555,7 @@ export async function getClinicDetail(organizationId: string) {
     where: { id: organizationId },
     select: {
       id: true,
+      code: true,
       name: true,
       legalName: true,
       type: true,
@@ -535,7 +569,7 @@ export async function getClinicDetail(organizationId: string) {
       _count: { select: { patients: true, appointments: true } },
       // Datos de la cuenta, no clínicos.
       users: {
-        select: { id: true, fullName: true, email: true, primaryRole: true, isActive: true, lastLoginAt: true },
+        select: { id: true, fullName: true, email: true, username: true, primaryRole: true, isActive: true, lastLoginAt: true },
         orderBy: { createdAt: "asc" },
       },
       clinicPayments: { orderBy: { paidAt: "desc" }, take: 24 },
