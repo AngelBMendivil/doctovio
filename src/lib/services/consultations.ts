@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
-import { assertConsultationInClinic, assertVisitInClinic } from "@/lib/services/tenant-guard";
+import { assertConsultationInClinic, assertVisitInClinic, assertPatientInClinic, assertUserInClinic } from "@/lib/services/tenant-guard";
 
 /** Inicia una consulta a partir de una visita (sala de espera -> consulta). */
 export async function startConsultation(
@@ -8,6 +8,13 @@ export async function startConsultation(
   userId: string,
   params: { visitId: string; patientId: string; doctorId: string; appointmentId?: string; type?: string; reason?: string }
 ) {
+  // Los tres ids vienen del formulario de la sala de espera. Sin comprobarlos
+  // se podia abrir una consulta sobre la visita y el paciente de otra clinica,
+  // y de paso mutar el estado de esa visita ajena.
+  await assertVisitInClinic(organizationId, params.visitId);
+  await assertPatientInClinic(organizationId, params.patientId);
+  await assertUserInClinic(organizationId, params.doctorId);
+
   const consultation = await db.$transaction(async (tx) => {
     const created = await tx.consultation.create({
       data: {

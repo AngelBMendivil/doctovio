@@ -79,3 +79,16 @@ export async function assertVisitInClinic(
   });
   if (!existe) throw new TenantError("La visita no existe en este consultorio.");
 }
+
+/** El médico (o usuario) pertenece a este consultorio. */
+export async function assertUserInClinic(
+  organizationId: string,
+  userId: string,
+  client: Cliente = db
+): Promise<void> {
+  const existe = await client.user.findFirst({
+    where: { id: userId, organizationId },
+    select: { id: true },
+  });
+  if (!existe) throw new TenantError("El usuario no pertenece a este consultorio.");
+}

@@ -3,6 +3,7 @@ import { logAudit } from "@/lib/services/audit";
 import { pushAppointment } from "@/lib/services/calendar-sync";
 import { scheduleReminders, cancelReminders } from "@/lib/services/reminders";
 import { generateFolio } from "@/lib/utils/folio";
+import { assertUserInClinic } from "@/lib/services/tenant-guard";
 import type { AppointmentChannel, AppointmentType, Prisma } from "@prisma/client";
 
 /**
@@ -616,6 +617,11 @@ export async function bloquearHorario(
   params: { doctorId: string; startAt: Date; endAt: Date; kind?: "MANUAL" | "LUNCH" | "VACATION"; reason?: string }
 ) {
   if (params.endAt <= params.startAt) throw new SchedulingError("El rango del bloqueo es inválido.", "INVALID");
+
+  // Un bloqueo para un medico de otro consultorio no llega a estorbar a nadie
+  // (busyRanges filtra por ambos), pero deja basura en la tabla y confunde al
+  // depurar. Se rechaza.
+  await assertUserInClinic(organizationId, params.doctorId);
 
   const block = await db.scheduleBlock.create({
     data: {
