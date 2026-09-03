@@ -18,6 +18,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
+    // CRITICO: corre antes que cualquier modulo y redirige DATABASE_URL a la
+    // base de pruebas. Sin esto, los servicios importan @/lib/db apuntando a
+    // PRODUCCION y escriben ahi. Quitarlo rompe la unica proteccion real.
+    setupFiles: ["tests/integration/setup.ts"],
     // En serie: varias suites escribiendo a la vez en la misma base se pisan,
     // y un fallo intermitente en pruebas de concurrencia no sirve de nada.
     fileParallelism: false,

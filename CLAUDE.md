@@ -81,6 +81,19 @@ un `organization.findFirst()` ahí: con dos consultorios, todos los mensajes de
 todos los pacientes caían en el primero. Ver `lib/whatsapp/routing.ts`. Jamás
 uses `findFirst()` sobre `organizations` para deducir el consultorio.
 
+**Validar disponibilidad FUERA de la transacción no valida nada.** `crearCita`
+comprobaba los horarios ocupados antes de abrir la transacción: dos
+confirmaciones simultáneas veían el mismo hueco libre y ambas agendaban. Cinco
+a la vez creaban cinco citas — cinco pacientes con el mismo médico a la misma
+hora. La comprobación buena va DENTRO, después de que `generateFolio` toma el
+candado del consultorio. La de afuera se conserva solo para fallar rápido.
+
+**Los servicios usan el singleton de `@/lib/db`.** Una prueba que instancie su
+propio PrismaClient NO redirige a los servicios: seguirían escribiendo contra
+`process.env.DATABASE_URL`. Por eso `tests/integration/setup.ts` reescribe esa
+variable antes de que nadie importe `@/lib/db`. Quitarlo del config hace que
+las pruebas escriban en PRODUCCIÓN.
+
 **El JWT no se entera de nada.** Vive 7 días y es autocontenido: no sabe si el
 consultorio fue suspendido ni si el usuario fue dado de baja. Por eso
 `requireSession()` revalida contra la base. Si agregas otra puerta de entrada,

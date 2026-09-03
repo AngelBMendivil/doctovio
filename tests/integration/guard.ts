@@ -1,119 +1,59 @@
-import { readFileSync } from "fs";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 
 /**
- * GUARDA DE LA BASE DE PRUEBAS.
+ * Acceso a la base de pruebas para las suites de integración.
  *
- * Las suites de integración BORRAN datos. Si alguna vez apuntaran a producción,
- * se llevarían los expedientes clínicos de pacientes reales. Esta guarda es lo
- * único que separa una cosa de la otra, así que es deliberadamente paranoica y
- * falla cerrado: ante cualquier duda, aborta.
+ * Devuelve EL MISMO cliente que usan los servicios (`@/lib/db`), no uno
+ * aparte. Esa es la corrección importante: si la prueba usara un cliente
+ * propio, `crearCita()` y compañía seguirían escribiendo por su cuenta contra
+ * `process.env.DATABASE_URL`, que sin la redirección es producción.
  *
- * Tres comprobaciones, en orden de fuerza:
- *
- *   1. El nombre de la base debe ser `doctovio_test`.
- *   2. NO debe llamarse como la base de producción.
- *   3. Debe existir la fila `_qa_marker` = 'DOCTOVIO_QA'.
- *
- * La tercera es la que de verdad protege. Las dos primeras miran una cadena de
- * texto, y una cadena se puede equivocar: alguien copia `.env.test`, cambia el
- * host y deja el nombre. La marca no: es una fila que solo existe en la base de
- * pruebas, puesta a mano al crearla. Producción no la tiene y nunca debe
- * tenerla.
+ * La validación pesada vive en `setup.ts`, que corre ANTES que cualquier
+ * módulo y redirige `DATABASE_URL` a la base de pruebas tras comprobar la
+ * marca de QA. Aquí solo se confirma que esa redirección ocurrió: si alguien
+ * quita el setup del config, esto lo detiene.
  */
 
 const BASE_ESPERADA = "doctovio_test";
-const MARCA = "DOCTOVIO_QA";
 
-function urlDePruebas(): string {
-  let url: string | undefined;
-  try {
-    const linea = readFileSync(".env.test", "utf8")
-      .split(/\r?\n/)
-      .find((l) => l.startsWith("DATABASE_URL="));
-    url = linea?.slice("DATABASE_URL=".length).trim().replace(/^["']|["']$/g, "");
-  } catch {
-    throw new Error(
-      "Falta .env.test con la DATABASE_URL de la base de pruebas.\n" +
-        "Las pruebas de integración NO usan el .env de producción a propósito."
-    );
-  }
-  if (!url) throw new Error("No hay DATABASE_URL en .env.test.");
-  return url;
+function baseActual(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("ABORTADO: no hay DATABASE_URL.");
+  return new URL(url).pathname.replace("/", "");
 }
 
-/** Nombre de la base de producción, para comparar contra él. */
-function baseDeProduccion(): string | null {
-  try {
-    const linea = readFileSync(".env", "utf8")
-      .split(/\r?\n/)
-      .find((l) => l.startsWith("DATABASE_URL="));
-    const url = linea?.slice("DATABASE_URL=".length).trim().replace(/^["']|["']$/g, "");
-    return url ? new URL(url).pathname.replace("/", "") : null;
-  } catch {
-    return null;
-  }
-}
+export async function testDb() {
+  const nombre = baseActual();
 
-let cliente: PrismaClient | null = null;
-
-/**
- * Devuelve el cliente de la base de pruebas, o lanza.
- *
- * Toda suite de integración DEBE obtener su cliente de aquí. Instanciar un
- * PrismaClient por su cuenta se salta la guarda entera.
- */
-export async function testDb(): Promise<PrismaClient> {
-  if (cliente) return cliente;
-
-  const url = urlDePruebas();
-  const nombre = new URL(url).pathname.replace("/", "");
-
-  // 1. El nombre debe ser el esperado.
   if (nombre !== BASE_ESPERADA) {
     throw new Error(
-      `ABORTADO: .env.test apunta a "${nombre}", no a "${BASE_ESPERADA}".\n` +
-        `Las pruebas borran datos: no se ejecutan contra una base desconocida.`
+      `ABORTADO: los servicios apuntan a "${nombre}", no a "${BASE_ESPERADA}".\n` +
+        `Falta tests/integration/setup.ts en setupFiles del config.`
     );
   }
 
-  // 2. Y jamás puede coincidir con la de producción.
-  const prod = baseDeProduccion();
-  if (prod && prod === nombre) {
-    throw new Error(`ABORTADO: .env.test apunta a la MISMA base que .env ("${prod}").`);
+  // Se confirma contra la base real, no contra la cadena de conexión: la
+  // cadena puede mentir, la fila no.
+  const marca = await db.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT id FROM "_qa_marker" WHERE id = 'DOCTOVIO_QA'`
+  );
+  if (marca.length === 0) {
+    throw new Error(`ABORTADO: la base conectada no tiene la marca de QA.`);
   }
 
-  const db = new PrismaClient({ datasources: { db: { url } } });
-
-  // 3. La marca. Esta es la que de verdad protege.
-  try {
-    const filas = await db.$queryRawUnsafe<{ id: string }[]>(
-      `SELECT id FROM "_qa_marker" WHERE id = '${MARCA}'`
-    );
-    if (filas.length === 0) throw new Error("sin marca");
-  } catch {
-    await db.$disconnect();
-    throw new Error(
-      `ABORTADO: la base "${nombre}" no tiene la marca ${MARCA}.\n` +
-        `Sin esa fila no hay forma de asegurar que no sea producción, así que no se toca.`
-    );
-  }
-
-  cliente = db;
   return db;
 }
 
 export async function closeTestDb() {
-  await cliente?.$disconnect();
-  cliente = null;
+  await db.$disconnect();
 }
 
 /**
- * Consultorio de trabajo para una suite, aislado del resto.
+ * Código de consultorio único por corrida.
  *
- * Cada suite crea el suyo con un código único, así dos suites en paralelo no se
- * pisan. Sobre todo: nunca se toca ninguno de los consultorios que venían en la
- * copia de producción, que son los que llevan datos clínicos reales.
+ * Cada suite trabaja sobre el suyo, así que dos suites nunca se pisan y —sobre
+ * todo— nunca se tocan los consultorios que vinieron en la copia de
+ * producción, que llevan datos clínicos reales.
  */
 export function codigoUnico(prefijo = "QA"): string {
   return `${prefijo}${Date.now().toString(36).slice(-4).toUpperCase()}`;

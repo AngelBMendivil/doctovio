@@ -79,18 +79,25 @@ export function durationFor(type: AppointmentType, rules: SchedulingRules): numb
 
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && aEnd > bStart;
 
-/** Rangos ocupados del médico en una ventana: citas, bloqueos y reservas vivas. */
+/**
+ * Rangos ocupados del médico en una ventana: citas, bloqueos y reservas vivas.
+ *
+ * Recibe el cliente para poder consultarse DENTRO de una transacción. Es
+ * indispensable: comprobada fuera, dos confirmaciones simultáneas ven el mismo
+ * hueco libre y ambas agendan.
+ */
 async function busyRanges(
   organizationId: string,
   doctorId: string,
   from: Date,
   to: Date,
-  opts: { ignoreAppointmentId?: string; ignoreHoldId?: string } = {}
+  opts: { ignoreAppointmentId?: string; ignoreHoldId?: string } = {},
+  client: Prisma.TransactionClient | typeof db = db
 ): Promise<Slot[]> {
   const now = new Date();
 
   const [appointments, blocks, holds] = await Promise.all([
-    db.appointment.findMany({
+    client.appointment.findMany({
       where: {
         organizationId,
         doctorId,
@@ -102,11 +109,11 @@ async function busyRanges(
       },
       select: { startTime: true, durationMinutes: true },
     }),
-    db.scheduleBlock.findMany({
+    client.scheduleBlock.findMany({
       where: { organizationId, doctorId, startAt: { lt: to }, endAt: { gt: from } },
       select: { startAt: true, endAt: true },
     }),
-    db.appointmentHold.findMany({
+    client.appointmentHold.findMany({
       where: {
         organizationId,
         doctorId,
@@ -278,6 +285,9 @@ export async function crearCita(
       throw new SchedulingError("Esa fecha está más allá del periodo que se puede agendar.", "TOO_FAR");
     }
 
+    // Comprobación temprana: evita abrir una transacción y pelear por el
+    // candado cuando el horario ya está claramente ocupado. NO es la que
+    // garantiza nada — la buena va dentro de la transacción.
     const busy = await busyRanges(organizationId, params.doctorId, params.startAt, endAt, {
       ignoreHoldId: params.holdId, // la propia reserva del paciente no debe estorbarle
     });
@@ -287,7 +297,33 @@ export async function crearCita(
   }
 
   const appointment = await db.$transaction(async (tx) => {
+    // generateFolio toma un candado sobre la fila del consultorio. A partir de
+    // aquí, dentro de esta transacción, nadie más del mismo consultorio está
+    // creando citas: la segunda espera a que ésta confirme.
     const folio = await generateFolio(tx, organizationId, "DOC");
+
+    // LA VALIDACIÓN QUE DE VERDAD CUENTA. Antes vivía fuera de la transacción,
+    // y eso permitía la doble reserva: dos confirmaciones simultáneas
+    // consultaban la disponibilidad antes de que ninguna hubiera insertado,
+    // las dos veían el hueco libre y las dos agendaban. Dos pacientes con el
+    // mismo médico a la misma hora, y el consultorio enterándose en la sala de
+    // espera.
+    //
+    // Aquí dentro, con el candado tomado, la segunda ya ve la cita de la
+    // primera y falla como debe.
+    if (!params.allowOverbook) {
+      const ocupado = await busyRanges(
+        organizationId,
+        params.doctorId,
+        params.startAt,
+        endAt,
+        { ignoreHoldId: params.holdId },
+        tx
+      );
+      if (ocupado.some((b) => overlaps(params.startAt, endAt, b.startAt, b.endAt))) {
+        throw new SchedulingError("Ese horario acaba de ser reservado por otra persona.", "TAKEN");
+      }
+    }
     const created = await tx.appointment.create({
       data: {
         organizationId,
