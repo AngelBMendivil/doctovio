@@ -169,8 +169,10 @@ o el middleware lo manda al login con un 307.
   (ver `MULTITENANT.md` §7) y los índices compuestos para cuando haya volumen.
 - **Un paciente nuevo no puede agendar por WhatsApp** — escala a recepción.
 - **Verificación de negocio en Meta** pendiente: sin ella no hay número real.
-- **Credenciales por rotar:** token de WhatsApp, App Secret y contraseña de la
-  base circularon por un chat.
+- **Rotación de credenciales: DECIDIDO NO HACERLA** (30 ago 2026). Se planteó
+  porque algunos secretos circularon por un chat en julio; el usuario evaluó el
+  riesgo y decidió que no lo amerita, dado que viven en Railway. Es su decisión:
+  no volver a proponerlo.
 - Los expedientes creados antes del arreglo de `birthDate` tienen edad 0.
 
 ---
@@ -316,12 +318,7 @@ por listado ni por id directo.
 
 ### Lo siguiente, en orden
 
-**1. 🔴 Rotar credenciales.** Token de WhatsApp, App Secret y contraseña de la
-base circularon por un chat. Pendiente desde julio. Mientras sigan vivos, todo
-el blindaje tiene una puerta abierta por detrás. **Antes de meter consultorios
-de terceros.**
-
-**2. 🟡 Lo que las pruebas NO cubren.** 86 unitarias y 18 verificaciones, pero
+**1. 🟡 Lo que las pruebas NO cubren.** 86 unitarias y 18 verificaciones, pero
 todo lo que exige ESCRIBIR sigue sin probarse: concurrencia y doble reserva
 (SCH-04), el candado de folios, IDOR por HTTP (API-01) y los flujos de
 interfaz. Necesitan una base de pruebas donde se pueda ensuciar y limpiar —
@@ -329,10 +326,10 @@ esta máquina no tiene Docker ni Postgres local. Cuando la haya, van en
 `tests/integration/` con guarda propia que verifique a qué base apunta antes de
 escribir una sola fila.
 
-**3. 🟡 Índices compuestos.** A 40 consultorios la agenda se va a sentir. Hoy
+**2. 🟡 Índices compuestos.** A 40 consultorios la agenda se va a sentir. Hoy
 no duele: hay dos.
 
-**4. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
+**3. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
 Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la
 ignora y en Railway ese es justo el caso. Detalle en `MULTITENANT.md` §7.
 
