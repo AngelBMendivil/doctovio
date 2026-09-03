@@ -1,13 +1,7 @@
 import { db } from "@/lib/db";
 import type { CreatePatientInput, QuickAdmitPatientInput } from "@/lib/validations/patient";
 import { logAudit } from "@/lib/services/audit";
-
-/** Genera el siguiente número de expediente consecutivo por organización. */
-async function nextRecordNumber(organizationId: string): Promise<string> {
-  const count = await db.patient.count({ where: { organizationId } });
-  const year = new Date().getFullYear();
-  return `EXP-${year}-${String(count + 1).padStart(5, "0")}`;
-}
+import { generateRecordNumber } from "@/lib/utils/folio";
 
 /**
  * Busca posibles duplicados por nombre+apellido, fecha de nacimiento,
@@ -45,9 +39,13 @@ export async function findPossibleDuplicates(
 }
 
 export async function createPatient(organizationId: string, userId: string, input: CreatePatientInput) {
-  const recordNumber = await nextRecordNumber(organizationId);
+  // El número y la inserción van en la MISMA transacción. Calcularlo fuera
+  // permitía que dos altas simultáneas obtuvieran el mismo, y la segunda moría
+  // con llave duplicada mientras alguien registraba a un paciente.
+  const patient = await db.$transaction(async (tx) => {
+    const recordNumber = await generateRecordNumber(tx, organizationId);
 
-  const patient = await db.patient.create({
+    return tx.patient.create({
     data: {
       organizationId,
       recordNumber,
@@ -73,6 +71,7 @@ export async function createPatient(organizationId: string, userId: string, inpu
       medicalProfile: { create: {} },
       medicalHistory: { create: {} },
     },
+    });
   });
 
   await logAudit({
@@ -89,7 +88,6 @@ export async function createPatient(organizationId: string, userId: string, inpu
 
 /** Alta rápida usada en "Agregar paciente sin cita". El expediente se completa después. */
 export async function quickAdmitPatient(organizationId: string, userId: string, input: QuickAdmitPatientInput) {
-  const recordNumber = await nextRecordNumber(organizationId);
   const parts = input.fullName.trim().split(/\s+/);
   const firstName = parts[0] || input.fullName;
   const lastLastName = parts.slice(1).join(" ") || "Sin apellido";
@@ -98,7 +96,11 @@ export async function quickAdmitPatient(organizationId: string, userId: string, 
   const parsedDate = new Date(input.birthDateOrAge);
   const birthDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
 
-  const patient = await db.patient.create({
+  // Mismo motivo que en createPatient: numero e insercion en una transaccion.
+  const patient = await db.$transaction(async (tx) => {
+    const recordNumber = await generateRecordNumber(tx, organizationId);
+
+    return tx.patient.create({
     data: {
       organizationId,
       recordNumber,
@@ -113,6 +115,7 @@ export async function quickAdmitPatient(organizationId: string, userId: string, 
       medicalProfile: { create: {} },
       medicalHistory: { create: {} },
     },
+    });
   });
 
   await logAudit({ organizationId, userId, action: "CREATE", entity: "patient", entityId: patient.id, newValues: patient });

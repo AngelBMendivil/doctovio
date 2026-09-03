@@ -88,6 +88,20 @@ a la vez creaban cinco citas — cinco pacientes con el mismo médico a la misma
 hora. La comprobación buena va DENTRO, después de que `generateFolio` toma el
 candado del consultorio. La de afuera se conserva solo para fallar rápido.
 
+**Nunca aceptes un `patientId` de la interfaz sin comprobar su consultorio.**
+`recordVitalSignsAction` tomaba `patientId` y `consultationId` directo del
+formulario y los pasaba a un servicio que no filtraba por consultorio: un
+usuario de una clínica podía escribir presión arterial o glucosa falsas en el
+expediente de un paciente de otra. No era una fuga de lectura, era corrupción
+de datos clínicos ajenos. Todo servicio que reciba ids de un formulario exige
+`organizationId` y valida la pertenencia.
+
+**Todo consecutivo por consultorio se genera con candado, dentro de una
+transacción.** Folios de cita, receta y orden (`generateFolio`) y números de
+expediente (`generateRecordNumber`), ambos en `lib/utils/folio.ts`. Un
+`count() + 1` suelto hace que dos altas simultáneas obtengan el mismo número y
+la segunda muera con llave duplicada, delante del usuario.
+
 **Los servicios usan el singleton de `@/lib/db`.** Una prueba que instancie su
 propio PrismaClient NO redirige a los servicios: seguirían escribiendo contra
 `process.env.DATABASE_URL`. Por eso `tests/integration/setup.ts` reescribe esa

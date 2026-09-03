@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { testDb, closeTestDb, codigoUnico } from "./guard";
 import { generateFolio } from "@/lib/utils/folio";
+import { createPatient } from "@/lib/services/patients";
 import type { PrismaClient } from "@prisma/client";
 
 /**
@@ -149,5 +150,25 @@ describe("folios bajo concurrencia", () => {
         },
       })
     ).rejects.toThrow();
+  });
+
+  it("PAT-01 · diez altas de paciente simultáneas dan diez expedientes distintos", async () => {
+    // Dos recepcionistas registrando a la vez. Antes el numero se calculaba
+    // fuera de toda transaccion: ambas obtenian el mismo y la segunda moria
+    // con llave duplicada mientras alguien daba de alta a un paciente.
+    const altas = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        createPatient(orgId, doctorId, {
+          firstName: `Concurrente${i}`,
+          lastName1: "Prueba",
+          birthDate: new Date("1990-01-01"),
+          sex: "FEMALE",
+          country: "MX",
+        } as never)
+      )
+    );
+
+    const numeros = altas.map((p) => p.recordNumber);
+    expect(new Set(numeros).size).toBe(10);
   });
 });

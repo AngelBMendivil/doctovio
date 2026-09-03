@@ -75,6 +75,28 @@ export function formatConsecutivo(n: number): string {
 }
 
 /**
+ * Siguiente número de expediente: EXP-2026-00001.
+ *
+ * Mismo candado que los folios, y por la misma razón. Antes se calculaba con un
+ * `count()` FUERA de cualquier transacción: dos altas simultáneas obtenían el
+ * mismo número y la segunda moría con llave duplicada, en la cara de la
+ * recepcionista que estaba dando de alta a un paciente.
+ *
+ * Formato aparte del de los folios (5 dígitos, con año) porque es lo que ya
+ * está impreso en los expedientes existentes: cambiarlo rompería la
+ * continuidad de la numeración del consultorio.
+ */
+export async function generateRecordNumber(
+  tx: Prisma.TransactionClient,
+  organizationId: string
+): Promise<string> {
+  await tx.$executeRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+
+  const count = await tx.patient.count({ where: { organizationId } });
+  return `EXP-${new Date().getFullYear()}-${String(count + 1).padStart(5, "0")}`;
+}
+
+/**
  * Parte un folio en sus piezas. Devuelve null si no tiene el formato esperado.
  *
  * La usa el asistente de WhatsApp: el paciente dicta su folio y hay que

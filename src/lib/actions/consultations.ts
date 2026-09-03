@@ -65,7 +65,9 @@ export async function recordVitalSignsAction(_prev: ActionState, formData: FormD
     const session = await requireSession();
     assertPermission(session.role, "RECORD_VITAL_SIGNS");
     const parsed = vitalSignSchema.parse(Object.fromEntries(formData.entries()));
-    await recordVitalSigns(session.userId, parsed);
+    // El consultorio sale de la SESION, nunca del formulario: es lo que
+    // impide escribir en el expediente de un paciente de otra clinica.
+    await recordVitalSigns(session.organizationId, session.userId, parsed);
     revalidatePath(`/consultations/${parsed.consultationId}`);
     return { ok: true, message: "Signos vitales guardados." };
   } catch (e) {
