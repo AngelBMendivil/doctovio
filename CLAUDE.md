@@ -21,14 +21,23 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
-**Pruebas:** `npm test` — 86 pruebas de lógica pura en `tests/unit/`, 2
-segundos, sin tocar la base.
+**Pruebas:** `npm test` — 86 de lógica pura en `tests/unit/`, 2 segundos, sin
+tocar la base. `npm run test:integration` — 44 contra la base de PRUEBAS
+(`doctovio_test`), ~50 s porque van por red. Cubren concurrencia y escrituras
+cruzadas entre consultorios, que es lo que no se puede probar de otra forma.
 
 **Verificación:** `npm run verificar` — comprueba aislamiento entre
 consultorios, IDOR, enrutamiento de WhatsApp, horarios, identidad de acceso,
 bitácora y folios duplicados contra datos REALES. Es de **solo lectura** (ni un
 create, update, delete o transacción), y por eso puede correrse contra
 producción.
+
+**La base de pruebas es `doctovio_test`**, una copia de producción en el mismo
+servidor de Railway. Su credencial vive en `.env.test` (no versionado).
+`tests/integration/setup.ts` corre ANTES que cualquier módulo, verifica la fila
+`_qa_marker` y reescribe `DATABASE_URL`; sin eso los servicios escribirían en
+producción, porque usan el singleton de `@/lib/db`. Las pruebas NO borran nada:
+cada corrida crea su consultorio con código único y lo deja.
 
 **Nunca corras `vitest` contra producción.** Una suite limpia datos entre
 casos; un `deleteMany` mal filtrado en un `afterEach` borra pacientes y
@@ -347,20 +356,64 @@ por listado ni por id directo.
 
 ---
 
+### Auditoría contra la matriz de procesos (2 sep 2026)
+
+Se validaron ~40 de los 52 procesos de `Doctovio_Matriz_Validacion_Procesos.xlsx`.
+**14 bugs encontrados y corregidos. Once eran lecturas o escrituras en
+expedientes de otros consultorios**, todos reproducibles desde un usuario normal
+con sesión válida:
+
+| Servicio | Permitía |
+|---|---|
+| `recordVitalSigns` | escribir presión y glucosa en un paciente ajeno |
+| `getLatestVitalSigns` | leer los signos vitales de un paciente ajeno |
+| `createDiagnosis` | registrar un diagnóstico en la consulta ajena |
+| `finalizeConsultation` | cerrar la consulta EN CURSO de otro médico |
+| `issuePrescription` | emitir una receta a nombre de un paciente ajeno |
+| `issueMedicalOrder` | lo mismo con órdenes médicas |
+| `uploadPatientDocument` | colgar un documento del expediente equivocado |
+| `createVisit` | abrir una visita con un paciente ajeno |
+| `createPayment` | cobrar contra la consulta de otro consultorio |
+| `startConsultation` | abrir consulta sobre la visita y el paciente ajenos |
+| `buildSharedSnapshot` | **exfiltrar el resumen clínico ajeno por referencias** |
+
+El último era el peor: la referencia médica está diseñada para compartir datos,
+así que nada downstream lo habría marcado como anómalo.
+
+Más los de concurrencia: doble reserva del mismo horario, folios duplicados y
+números de expediente duplicados.
+
+**Lectura del hallazgo:** el aislamiento de LECTURA estaba bien desde antes; el
+de ESCRITURA no existía. Los servicios recibían `organizationId` y lo usaban
+para crear la fila, pero no para validar los ids que venían del formulario.
+
+**Lo que sigue sin cubrirse:** WhatsApp con número real, recordatorios,
+Resend y Google Calendar — todos dependen de credenciales de terceros. Y API-01
+(IDOR por HTTP), que sí se puede hacer.
+
+**Recorridos para validación manual:** artefacto publicado el 2 sep 2026 con los
+cinco caminos de usuario y qué mirar en cada paso.
+
+---
+
 ### Lo siguiente, en orden
 
-**1. 🟡 Lo que las pruebas NO cubren.** 86 unitarias y 18 verificaciones, pero
-todo lo que exige ESCRIBIR sigue sin probarse: concurrencia y doble reserva
-(SCH-04), el candado de folios, IDOR por HTTP (API-01) y los flujos de
-interfaz. Necesitan una base de pruebas donde se pueda ensuciar y limpiar —
-esta máquina no tiene Docker ni Postgres local. Cuando la haya, van en
-`tests/integration/` con guarda propia que verifique a qué base apunta antes de
-escribir una sola fila.
+**1. 🔴 Quitar los usuarios demo de producción.** `admin@demo.com`,
+`doctor@demo.com` y `asistente@demo.com` siguen vivos con `Demo1234!`, una
+contraseña documentada en este archivo, y con acceso a los expedientes reales de
+la Dra. Es lo último que queda antes de meter un consultorio de terceros.
 
-**2. 🟡 Índices compuestos.** A 40 consultorios la agenda se va a sentir. Hoy
+**2. 🟡 API-01 · IDOR por HTTP.** Es la única familia de bug ya conocida que no
+se ha probado por su propia puerta. Necesita un cliente HTTP con cookies
+manipuladas; la base de pruebas ya existe.
+
+**3. 🟡 Los recorridos manuales.** Lo que ninguna prueba puede ver: que la
+pantalla llame al servicio correcto con los argumentos correctos.
+
+**4. 🟡 Índices compuestos.** A 40 consultorios la agenda se va a sentir. Hoy
 no duele: hay dos.
 
-**3. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
+**5. 🟢 Diferible:** `ClinicUser` (un doctor en varios consultorios), RLS en
 Postgres — ojo con `FORCE ROW LEVEL SECURITY`, sin eso el dueño de la tabla la
 ignora y en Railway ese es justo el caso. Detalle en `MULTITENANT.md` §7.
 
