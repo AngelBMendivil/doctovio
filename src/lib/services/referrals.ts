@@ -20,9 +20,13 @@ const SHAREABLE_FIELDS: Record<string, string> = {
 };
 
 /** Construye el valor textual de cada campo compartible a partir del expediente, en el momento del envío. */
-async function buildSharedSnapshot(patientId: string, fieldKeys: string[], extra: { diagnosisText?: string; treatmentText?: string; studiesText?: string }) {
-  const patient = await db.patient.findUniqueOrThrow({
-    where: { id: patientId },
+async function buildSharedSnapshot(organizationId: string, patientId: string, fieldKeys: string[], extra: { diagnosisText?: string; treatmentText?: string; studiesText?: string }) {
+  // CON organizationId. Sin el, un medico podia armar el resumen clinico de
+  // un paciente de OTRO consultorio —nombre, alergias, cronicos, medicacion—
+  // y enviarselo a cualquier medico. No es escribir donde no debe: es sacar
+  // el expediente ajeno por una puerta disenada para compartir.
+  const patient = await db.patient.findFirstOrThrow({
+    where: { id: patientId, organizationId },
     include: {
       medicalProfile: true,
       allergies: { where: { isActive: true } },
@@ -74,7 +78,7 @@ export async function createAndSendReferral(
     where: { id: input.toDoctorId, primaryRole: "DOCTOR", isActive: true },
   });
 
-  const snapshot = await buildSharedSnapshot(input.patientId, input.sharedFieldKeys, {
+  const snapshot = await buildSharedSnapshot(organizationFromId, input.patientId, input.sharedFieldKeys, {
     diagnosisText: input.diagnosisText,
     treatmentText: input.treatmentText,
     studiesText: input.studiesText,
@@ -227,6 +231,13 @@ export async function submitReferralResponse(
 }
 
 export async function closeReferral(organizationId: string, userId: string, referralId: string) {
+  // Cualquiera podia cerrar cualquier referencia con solo su id. Se exige que
+  // el consultorio sea parte de ella, como emisor o receptor.
+  await db.medicalReferral.findFirstOrThrow({
+    where: { id: referralId, OR: [{ organizationFromId: organizationId }, { organizationToId: organizationId }] },
+    select: { id: true },
+  });
+
   return db.$transaction(async (tx) => {
     const updated = await tx.medicalReferral.update({
       where: { id: referralId },

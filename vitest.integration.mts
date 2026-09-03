@@ -13,7 +13,13 @@ import { resolve } from "path";
  */
 export default defineConfig({
   resolve: {
-    alias: { "@": resolve(import.meta.dirname, "./src") },
+    alias: {
+      "@": resolve(import.meta.dirname, "./src"),
+      // `server-only` solo existe dentro de Next. Se sustituye por un modulo
+      // vacio en vez de quitarlo del codigo: esa proteccion es legitima en
+      // produccion y no debe cederse por conveniencia de las pruebas.
+      "server-only": resolve(import.meta.dirname, "./tests/integration/server-only-stub.ts"),
+    },
   },
   test: {
     environment: "node",
