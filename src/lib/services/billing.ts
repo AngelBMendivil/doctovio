@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import type { PaymentMethod, PaymentOrigin } from "@prisma/client";
+import { assertConsultationInClinic } from "@/lib/services/tenant-guard";
 
 /** Consultas finalizadas que aún no tienen pago (cola "Por pagar"). */
 export async function listPendingPayments(organizationId: string) {
@@ -60,6 +61,10 @@ export async function createPayment(
     notes?: string;
   }
 ) {
+  // Se validaba la aseguradora pero NO la consulta ni el paciente: se podia
+  // registrar un cobro contra la consulta de otro consultorio.
+  await assertConsultationInClinic(organizationId, data.consultationId, data.patientId);
+
   const existing = await db.payment.findUnique({ where: { consultationId: data.consultationId } });
   if (existing) throw new Error("Esta consulta ya tiene un pago registrado.");
 

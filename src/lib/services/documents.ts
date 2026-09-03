@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import { validateUpload, buildStorageKey, uploadObject, getSignedDownloadUrl } from "@/lib/storage/r2";
 import type { DocumentCategory, PrivacyLevel } from "@prisma/client";
+import { assertPatientInClinic } from "@/lib/services/tenant-guard";
 
 type UploadDocumentParams = {
   organizationId: string;
@@ -18,6 +19,10 @@ type UploadDocumentParams = {
 };
 
 export async function uploadPatientDocument(params: UploadDocumentParams) {
+  // Antes de subir nada: el paciente debe ser de este consultorio. Un
+  // documento clinico colgado del expediente equivocado no se deshace.
+  await assertPatientInClinic(params.organizationId, params.patientId);
+
   validateUpload(params.mimeType, params.fileBuffer.byteLength);
   const key = buildStorageKey(params.organizationId, params.fileName);
   await uploadObject({ key, body: params.fileBuffer, mimeType: params.mimeType });

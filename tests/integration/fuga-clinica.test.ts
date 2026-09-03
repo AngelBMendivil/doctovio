@@ -2,7 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { testDb, closeTestDb, codigoUnico } from "./guard";
 import { recordVitalSigns, getLatestVitalSigns } from "@/lib/services/vitalSigns";
 import { getPatientById, createPatient } from "@/lib/services/patients";
-import { startConsultation } from "@/lib/services/consultations";
+import { startConsultation, finalizeConsultation } from "@/lib/services/consultations";
+import { createDiagnosis } from "@/lib/services/diagnoses";
+import { issuePrescription } from "@/lib/services/prescriptions";
+import { createVisit } from "@/lib/services/visits";
 import type { PrismaClient } from "@prisma/client";
 
 /**
@@ -137,5 +140,70 @@ describe("CLN-02 · signos vitales entre consultorios", () => {
     expect(await getLatestVitalSigns(A.orgId, B.patientId)).toBeNull();
     // Y B sí ve lo suyo.
     expect(await getLatestVitalSigns(B.orgId, B.patientId)).not.toBeNull();
+  });
+});
+
+describe("CLN-03 · diagnósticos entre consultorios", () => {
+  it("A NO puede registrar un diagnóstico en la consulta de B", async () => {
+    // Un diagnóstico es una afirmación clínica formal. Escribirlo en el
+    // expediente de otro consultorio es de lo más grave que puede pasar aquí.
+    await expect(
+      createDiagnosis(A.orgId, A.doctorId, {
+        consultationId: B.consultationId,
+        patientId: B.patientId,
+        label: "Diagnóstico inyectado desde otra clínica",
+        type: "CONFIRMED",
+      } as never)
+    ).rejects.toThrow();
+
+    expect(await db.diagnosis.count({ where: { consultationId: B.consultationId } })).toBe(0);
+  });
+
+  it("A sí puede en la suya", async () => {
+    const d = await createDiagnosis(A.orgId, A.doctorId, {
+      consultationId: A.consultationId,
+      patientId: A.patientId,
+      label: "Diagnóstico propio",
+      type: "PRESUMPTIVE",
+    } as never);
+    expect(d.id).toBeTruthy();
+  });
+});
+
+describe("CLN-04 · finalizar consulta ajena", () => {
+  it("A NO puede cerrar la consulta EN CURSO de B", async () => {
+    // Finalizar bloquea la edición: cerrar la consulta de otro médico a media
+    // captura le congela el expediente.
+    await expect(finalizeConsultation(A.orgId, A.doctorId, B.consultationId)).rejects.toThrow();
+
+    const c = await db.consultation.findUnique({ where: { id: B.consultationId }, select: { status: true } });
+    expect(c?.status).toBe("IN_PROGRESS");
+  });
+});
+
+describe("CLN-03 · recetas a pacientes ajenos", () => {
+  it("A NO puede emitir una receta a nombre del paciente de B", async () => {
+    await expect(
+      issuePrescription(A.orgId, A.doctorId, {
+        patientId: B.patientId,
+        consultationId: A.consultationId,
+        items: [{ drug: "Paracetamol", dose: "500mg", frequency: "c/8h", duration: "3 días" }],
+      } as never)
+    ).rejects.toThrow();
+
+    expect(await db.prescription.count({ where: { patientId: B.patientId } })).toBe(0);
+  });
+});
+
+describe("PAT-02 · visitas con paciente ajeno", () => {
+  it("A NO puede abrir una visita con el paciente de B", async () => {
+    await expect(
+      createVisit(A.orgId, A.doctorId, {
+        patientId: B.patientId,
+        doctorId: A.doctorId,
+        arrivalType: "WITHOUT_APPOINTMENT",
+        priority: "NORMAL",
+      } as never)
+    ).rejects.toThrow();
   });
 });

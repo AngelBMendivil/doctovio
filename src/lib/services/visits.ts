@@ -1,9 +1,13 @@
 import { db } from "@/lib/db";
 import type { CreateVisitInput } from "@/lib/validations/visit";
 import { logAudit } from "@/lib/services/audit";
+import { assertPatientInClinic } from "@/lib/services/tenant-guard";
 
 /** Registra la llegada de un paciente con cita: crea la visita y actualiza el estado de la cita. */
 export async function createVisit(organizationId: string, userId: string, input: CreateVisitInput) {
+  // El patientId viene del formulario de la sala de espera.
+  await assertPatientInClinic(organizationId, input.patientId);
+
   const visit = await db.$transaction(async (tx) => {
     const created = await tx.visit.create({
       data: {

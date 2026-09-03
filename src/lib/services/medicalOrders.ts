@@ -2,8 +2,11 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
 import type { CreateMedicalOrderInput } from "@/lib/validations/medicalOrder";
 import { generateFolio } from "@/lib/utils/folio";
+import { assertPatientInClinic } from "@/lib/services/tenant-guard";
 
 export async function issueMedicalOrder(organizationId: string, doctorId: string, input: CreateMedicalOrderInput) {
+  await assertPatientInClinic(organizationId, input.patientId);
+
   const order = await db.$transaction(async (tx) => {
     const folio = await generateFolio(tx, organizationId, "OM");
     return tx.medicalOrder.create({

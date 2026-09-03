@@ -3,6 +3,7 @@ import { logAudit } from "@/lib/services/audit";
 import { generateSecureToken } from "@/lib/utils/tokens";
 import { generateFolio } from "@/lib/utils/folio";
 import type { CreatePrescriptionInput } from "@/lib/validations/prescription";
+import { assertPatientInClinic } from "@/lib/services/tenant-guard";
 
 /**
  * Crea y emite una receta en una sola transacción (folio + items).
@@ -10,6 +11,10 @@ import type { CreatePrescriptionInput } from "@/lib/validations/prescription";
  * Una vez emitida, no se edita: una corrección crea una nueva versión (supersede).
  */
 export async function issuePrescription(organizationId: string, doctorId: string, input: CreatePrescriptionInput) {
+  // Sin esto se podia emitir una receta a nombre de un paciente de otro
+  // consultorio.
+  await assertPatientInClinic(organizationId, input.patientId);
+
   const prescription = await db.$transaction(async (tx) => {
     const folio = await generateFolio(tx, organizationId, "RX");
     return tx.prescription.create({

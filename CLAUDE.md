@@ -88,13 +88,17 @@ a la vez creaban cinco citas — cinco pacientes con el mismo médico a la misma
 hora. La comprobación buena va DENTRO, después de que `generateFolio` toma el
 candado del consultorio. La de afuera se conserva solo para fallar rápido.
 
-**Nunca aceptes un `patientId` de la interfaz sin comprobar su consultorio.**
-`recordVitalSignsAction` tomaba `patientId` y `consultationId` directo del
-formulario y los pasaba a un servicio que no filtraba por consultorio: un
-usuario de una clínica podía escribir presión arterial o glucosa falsas en el
-expediente de un paciente de otra. No era una fuga de lectura, era corrupción
-de datos clínicos ajenos. Todo servicio que reciba ids de un formulario exige
-`organizationId` y valida la pertenencia.
+**Nunca aceptes un `patientId` o `consultationId` de la interfaz sin comprobar
+su consultorio.** Los server actions arman su entrada con
+`Object.fromEntries(formData)`: esos ids los elige quien manda el formulario.
+Filtrar al LEER no alcanza; hay que validar antes de ESCRIBIR, con los
+ayudantes de `lib/services/tenant-guard.ts`.
+
+Se reprodujeron con pruebas, todas desde un usuario normal con sesión válida:
+escribir signos vitales en el paciente de otra clínica, registrar un
+diagnóstico en su consulta, emitir una receta a nombre de su paciente, y
+cerrarle una consulta en curso. No son fugas de lectura: son escrituras en
+expedientes clínicos ajenos.
 
 **Todo consecutivo por consultorio se genera con candado, dentro de una
 transacción.** Folios de cita, receta y orden (`generateFolio`) y números de

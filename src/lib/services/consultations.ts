@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/services/audit";
+import { assertConsultationInClinic, assertVisitInClinic } from "@/lib/services/tenant-guard";
 
 /** Inicia una consulta a partir de una visita (sala de espera -> consulta). */
 export async function startConsultation(
@@ -58,6 +59,10 @@ export async function updateConsultationDraft(
 
 /** Solo el médico puede finalizar. No se podrá editar libremente después. */
 export async function finalizeConsultation(organizationId: string, userId: string, consultationId: string) {
+  // Finalizar bloquea la edicion: sin esta comprobacion, un usuario podia
+  // cerrar la consulta EN CURSO de otro consultorio.
+  await assertConsultationInClinic(organizationId, consultationId);
+
   const consultation = await db.$transaction(async (tx) => {
     const updated = await tx.consultation.update({
       where: { id: consultationId },
@@ -76,6 +81,8 @@ export async function finalizeConsultation(organizationId: string, userId: strin
 
 /** Corrección posterior a una consulta finalizada: se agrega como nota, nunca se sobrescribe el original. */
 export async function addConsultationAddendum(organizationId: string, userId: string, consultationId: string, note: string) {
+  await assertConsultationInClinic(organizationId, consultationId);
+
   const created = await db.consultationNote.create({
     data: { consultationId, authorId: userId, note, isAddendum: true },
   });
