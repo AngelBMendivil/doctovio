@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { getSession, isPlatformAdmin } from "@/lib/auth/session";
 import { LogoHorizontal } from "@/components/brand/logo";
+import { logoutAction } from "@/lib/actions/auth";
 import { MasterNav } from "@/components/master/master-nav";
 
 export const metadata: Metadata = { title: "Administrador Maestro" };
@@ -50,13 +51,18 @@ export default async function MasterLayout({ children }: { children: React.React
             <p className="truncate text-[13px] font-medium text-white">{session.fullName}</p>
             <p className="truncate text-[11px] text-white/50">{session.email}</p>
           </div>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Mi consultorio
-          </Link>
+          {/* Antes había aquí un enlace a /dashboard. Se quitó al separar los
+              roles: el operador de plataforma no opera consultorios, así que
+              ese enlace solo rebotaba de vuelta a /master. */}
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <LogOut className="h-4 w-4" aria-hidden />
+              Cerrar sesión
+            </button>
+          </form>
         </div>
       </aside>
 

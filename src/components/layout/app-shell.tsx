@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X, PanelLeftClose, PanelLeft, Bell, ChevronDown, Settings, LogOut, Building2 } from "lucide-react";
+import { Menu, X, PanelLeftClose, PanelLeft, Bell, ChevronDown, Settings, LogOut } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { LogoHorizontal } from "@/components/brand/logo";
 import { logoutAction } from "@/lib/actions/auth";
@@ -82,19 +82,8 @@ function ProfileMenu({ session, initials }: { session: SessionPayload; initials:
               Configuración
             </Link>
           )}
-          {/* Solo el operador de plataforma. La sesión trae la bandera ya
-              revalidada contra la base; esconder el enlace es comodidad, la
-              seguridad la pone requirePlatformAdmin() del otro lado. */}
-          {session.isPlatformAdmin && (
-            <Link
-              href="/master"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm text-foreground hover:bg-muted"
-            >
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              Plataforma
-            </Link>
-          )}
+          {/* Ya no hay enlace a /master: el operador de plataforma nunca llega
+              a esta pantalla — el layout de (app) lo manda a su panel. */}
           <form action={logoutAction}>
             <button
               type="submit"

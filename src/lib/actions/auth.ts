@@ -45,7 +45,11 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await logAudit({ organizationId: user.organizationId, userId: user.id, action: "LOGIN", entity: "user", entityId: user.id });
 
-  redirect("/dashboard");
+  // El operador de plataforma entra a SU panel, no al consultorio. Su trabajo
+  // es administrar el SaaS: consultorios, usuarios, cobranza. Mandarlo al
+  // dashboard clinico lo pone frente a expedientes de pacientes que no le
+  // corresponden.
+  redirect(user.isPlatformAdmin ? "/master" : "/dashboard");
 }
 
 export async function logoutAction() {

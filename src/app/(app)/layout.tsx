@@ -11,22 +11,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // un consultorio no lo suspende: sigue operando hasta que expire el token.
   if (await isClinicSuspended(session.userId)) redirect("/suspendido");
 
+  // El operador de plataforma NO opera consultorios. Su panel maneja conteos y
+  // cobranza; los expedientes clinicos de cada clinica son de esa clinica.
+  //
+  // Sin esta linea la separacion era solo de intencion: bastaba escribir
+  // /dashboard en la barra para entrar como administrador del consultorio y ver
+  // los expedientes completos. Es el mismo acceso que dejamos fuera al
+  // descartar "Ver como consultorio", entrando por otra puerta.
+  if (await isPlatformAdmin(session.userId)) redirect("/master");
+
   // Conversaciones esperando a una persona: alimenta la campana del encabezado
   // para que nadie se quede colgado sin que el consultorio se entere.
-  //
-  // La bandera de plataforma NO viaja en el token: se lee de la base, igual que
-  // la suspensión. Ambas consultas comparten el mismo `cache()` por request, así
-  // que esto no agrega una segunda vuelta a la base.
-  const [pendingConversations, platformAdmin] = await Promise.all([
-    countNeedsHuman(session.organizationId),
-    isPlatformAdmin(session.userId),
-  ]);
+  const pendingConversations = await countNeedsHuman(session.organizationId);
 
+  // Aquí ya no hay operadores de plataforma: la línea de arriba los sacó. Por
+  // eso el enlace a /master no se pasa, no aparecería para nadie.
   return (
-    <AppShell
-      session={{ ...session, isPlatformAdmin: platformAdmin }}
-      pendingConversations={pendingConversations}
-    >
+    <AppShell session={session} pendingConversations={pendingConversations}>
       {children}
     </AppShell>
   );
