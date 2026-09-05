@@ -32,6 +32,11 @@ function Submit({ label }: { label: string }) {
  * coincidencias y de ahí se DERIVA si el paciente es nuevo o ya existe —
  * nunca lo elige el usuario. Así no hay forma de crear un duplicado sin
  * haber visto antes al candidato.
+ *
+ * Por eso el desplegable de tipo de cita solo distingue SEGUIMIENTO de CITA
+ * MÉDICA, y aparece únicamente cuando el paciente ya está registrado. "Primera
+ * vez" no se elige: se deduce. Ofrecerlo como opción sería una puerta para
+ * saltarse el aviso de expediente duplicado.
  */
 export function NewAppointmentPanel({ doctors, defaultDate }: { doctors: Doctor[]; defaultDate: string }) {
   // Datos de identificación
@@ -178,7 +183,22 @@ export function NewAppointmentPanel({ doctors, defaultDate }: { doctors: Doctor[
           {selected ? (
             <>
               <input type="hidden" name="patientId" value={selected.id} />
-              <input type="hidden" name="type" value="EXISTING_PATIENT" />
+              {/*
+                TIPO DE CITA — solo para pacientes ya registrados.
+
+                "Primera vez" NO está en este desplegable a propósito: lo
+                DERIVA la búsqueda de coincidencias de arriba. Si recepción
+                pudiera declararlo a mano, bastaría elegirlo para saltarse el
+                aviso de expediente parecido y crear un duplicado del mismo
+                paciente — que es justo lo que este panel existe para evitar.
+              */}
+              <div>
+                <Label htmlFor="tp" required>Tipo de cita</Label>
+                <Select id="tp" name="type" defaultValue="EXISTING_PATIENT" required>
+                  <option value="EXISTING_PATIENT">Cita médica — motivo nuevo</option>
+                  <option value="FOLLOW_UP">Seguimiento — continúa un padecimiento</option>
+                </Select>
+              </div>
             </>
           ) : (
             <>
@@ -189,6 +209,14 @@ export function NewAppointmentPanel({ doctors, defaultDate }: { doctors: Doctor[
               <input type="hidden" name="email" value={email} />
               <input type="hidden" name="birthDate" value={birthDate} />
               {notDuplicate && <input type="hidden" name="confirmedNotDuplicate" value="true" />}
+              {/* Sin desplegable: el tipo ya está decidido, y se dice por qué.
+                  Un campo deshabilitado explica mejor que su ausencia. */}
+              <div>
+                <Label>Tipo de cita</Label>
+                <div className="flex h-11 items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground">
+                  Primera vez — lo determina el sistema al no encontrar expediente
+                </div>
+              </div>
             </>
           )}
 
