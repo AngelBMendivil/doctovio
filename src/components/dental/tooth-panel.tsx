@@ -60,6 +60,35 @@ export async function ToothPanel({
 
   const vivos = plan.filter((p) => p.status !== "CANCELLED" && p.status !== "COMPLETED");
 
+  /**
+   * EL HALLAZGO VIGENTE DE ESTA PIEZA.
+   *
+   * Es lo que se acaba de registrar del lado izquierdo, y es de donde debe
+   * salir el tratamiento: si el dentista ya marcó "caries en mesial", pedirle
+   * que vuelva a marcar mesial al planear la resina es capturar el mismo dato
+   * dos veces — y las dos veces se puede equivocar.
+   *
+   * Además liga el tratamiento con el hallazgo que lo motivó. Esa relación ya
+   * existía en el modelo (`findingEntryId`) pero ninguna pantalla la llenaba,
+   * así que en la práctica nunca se sabía de qué venía un tratamiento.
+   *
+   * Se toma el más reciente sin cancelar. Lo cancelado no motiva nada.
+   */
+  const hallazgo = historia.find((e) => e.kind === "FINDING" && e.status !== "CANCELLED") ?? null;
+
+  const superficiesDelHallazgo = hallazgo
+    ? hallazgo.surfaces.filter((s: ToothSurface) => s !== "WHOLE")
+    : [];
+
+  const diagnosticoSugerido = hallazgo
+    ? [
+        codeLabel(hallazgo.code),
+        superficiesDelHallazgo.map((s) => surfaceLabel(s, toothCode).toLowerCase()).join(", "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : "";
+
   return (
     <div className="space-y-4">
       <Card>
@@ -206,9 +235,23 @@ export async function ToothPanel({
               <p className="text-sm text-muted-foreground">
                 Lo que se le propone al paciente, con su precio. No es un cobro.
               </p>
+              {hallazgo && (
+                <p className="mt-1 rounded-md border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+                  Tomado del hallazgo del {toothCode}: <strong>{diagnosticoSugerido}</strong>. Puedes
+                  cambiarlo si el tratamiento es para otra cosa.
+                </p>
+              )}
             </CardHeader>
             <CardContent>
-              <SettingsForm action={addTreatmentAction} submitLabel="Agregar al plan" className={GRID}>
+              {/* El `key` fuerza el remonte cuando cambia el hallazgo vigente.
+                  Sin él, React conserva las casillas ya montadas y `defaultChecked`
+                  se ignora: al registrar la caries, las caras seguirían vacías. */}
+              <SettingsForm
+                key={hallazgo?.id ?? "sin-hallazgo"}
+                action={addTreatmentAction}
+                submitLabel="Agregar al plan"
+                className={GRID}
+              >
                 <TreatmentFields
                   patientId={patientId}
                   toothCode={toothCode}
@@ -216,6 +259,9 @@ export async function ToothPanel({
                   canOverridePrice={canOverridePrice}
                   monedaPorOmision={monedaPorOmision}
                   consultationId={consultationId}
+                  findingEntryId={hallazgo?.id}
+                  superficiesSugeridas={superficiesDelHallazgo}
+                  diagnosticoSugerido={diagnosticoSugerido}
                 />
               </SettingsForm>
             </CardContent>

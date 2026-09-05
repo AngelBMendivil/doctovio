@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TREATMENTS, SURFACES, surfaceLabel, isWholeToothCode } from "@/lib/constants/odontograma";
+import type { ToothSurface } from "@prisma/client";
 import { formatMoney, lineTotal } from "@/lib/utils/money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,8 @@ export function TreatmentFields({
   canOverridePrice,
   monedaPorOmision = "MXN",
   findingEntryId,
+  superficiesSugeridas = [],
+  diagnosticoSugerido = "",
   consultationId,
 }: {
   patientId: string;
@@ -43,6 +46,10 @@ export function TreatmentFields({
   monedaPorOmision?: string;
   canOverridePrice: boolean;
   findingEntryId?: string;
+  /** Las caras del hallazgo vigente: vienen ya marcadas para no capturarlas dos veces. */
+  superficiesSugeridas?: ToothSurface[];
+  /** "Caries mesial", armado desde ese mismo hallazgo. */
+  diagnosticoSugerido?: string;
   consultationId?: string;
 }) {
   const [treatmentCode, setTreatmentCode] = useState(TREATMENTS[0].code);
@@ -69,7 +76,14 @@ export function TreatmentFields({
 
       <div>
         <Label htmlFor="diagnosis">Diagnóstico</Label>
-        <Input id="diagnosis" name="diagnosis" placeholder="Caries oclusal" />
+        {/* Viene del hallazgo que se acaba de registrar. Es texto, así que se
+            puede corregir sin pelear con el formulario. */}
+        <Input
+          id="diagnosis"
+          name="diagnosis"
+          defaultValue={diagnosticoSugerido}
+          placeholder="Caries oclusal"
+        />
       </div>
 
       <div>
@@ -171,7 +185,16 @@ export function TreatmentFields({
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {SURFACES.map((s) => (
                 <label key={s} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="surfaces" value={s} className="h-4 w-4" />
+                  {/* Ya marcadas si el hallazgo las traía: el dentista dijo
+                      "caries en mesial" hace diez segundos y no tiene por qué
+                      volver a decirlo. */}
+                  <input
+                    type="checkbox"
+                    name="surfaces"
+                    value={s}
+                    defaultChecked={superficiesSugeridas.includes(s)}
+                    className="h-4 w-4"
+                  />
                   {surfaceLabel(s, toothCode)}
                 </label>
               ))}
