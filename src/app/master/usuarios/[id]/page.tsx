@@ -39,8 +39,8 @@ export default async function EditarUsuarioPage({ params }: { params: { id: stri
 
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: "Correo", value: user.email },
-          { label: "Alias de acceso", value: user.username ?? "—", mono: true },
+          { label: "Consultorio", value: user.organization.name },
+          { label: "Código", value: user.organization.code, mono: true },
           { label: "Alta", value: fecha(user.createdAt) },
           { label: "Último acceso", value: fecha(user.lastLoginAt) },
         ].map((m) => (
@@ -57,8 +57,8 @@ export default async function EditarUsuarioPage({ params }: { params: { id: stri
         <CardHeader>
           <CardTitle>Datos del usuario</CardTitle>
           <CardDescription>
-            El correo y el alias no se editan: son su identidad de acceso, y cambiarlos
-            es dar de alta a otra persona.
+            El alias no se cambia nunca. El correo sí, por si se capturó con un
+            error al darlo de alta.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,6 +66,8 @@ export default async function EditarUsuarioPage({ params }: { params: { id: stri
             user={{
               id: user.id,
               fullName: user.fullName,
+              email: user.email,
+              username: user.username,
               phone: user.phone,
               primaryRole: user.primaryRole,
               isActive: user.isActive,
@@ -86,7 +88,7 @@ export default async function EditarUsuarioPage({ params }: { params: { id: stri
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResetPasswordForm email={user.email} />
+          <ResetPasswordForm userId={user.id} />
         </CardContent>
       </Card>
     </div>

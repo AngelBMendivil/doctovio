@@ -39,6 +39,8 @@ export function UserEditForm({
   user: {
     id: string;
     fullName: string;
+    email: string;
+    username: string | null;
     phone: string | null;
     primaryRole: string;
     isActive: boolean;
@@ -62,6 +64,29 @@ export function UserEditForm({
         <div className="space-y-1.5">
           <Label htmlFor="phone">Teléfono</Label>
           <Input id="phone" name="phone" defaultValue={user.phone ?? ""} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Correo *</Label>
+          <Input id="email" name="email" type="email" defaultValue={user.email} required />
+          <p className="text-xs text-muted-foreground">
+            Sirve para entrar y para recuperar la cuenta. Debe ser único en la plataforma.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="username">Alias de acceso</Label>
+          {/* Sin `name`: no se envía y no puede modificarse por accidente ni
+              mandando el formulario a mano. */}
+          <Input
+            id="username"
+            defaultValue={user.username ?? "—"}
+            disabled
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            No se puede cambiar: es lo que teclea todos los días para entrar.
+          </p>
         </div>
 
         <div className="space-y-1.5">
@@ -107,12 +132,12 @@ export function UserEditForm({
 }
 
 /** Restablecer la contraseña va aparte: es una acción distinta, no un campo. */
-export function ResetPasswordForm({ email }: { email: string }) {
+export function ResetPasswordForm({ userId }: { userId: string }) {
   const [state, action] = useFormState(resetPasswordAction, initial);
 
   return (
     <form action={action} className="space-y-4">
-      <input type="hidden" name="email" value={email} />
+      <input type="hidden" name="userId" value={userId} />
 
       <div className="space-y-1.5">
         <Label htmlFor="password">Contraseña nueva</Label>

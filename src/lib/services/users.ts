@@ -192,3 +192,23 @@ export async function findUserByLogin(identifier: string) {
     ? db.user.findUnique({ where: { email: id } })
     : db.user.findUnique({ where: { username: id } });
 }
+
+/**
+ * Restablece la contraseña por ID de usuario.
+ *
+ * Se prefiere sobre la versión por correo cuando ya se tiene al usuario en
+ * pantalla: el id no cambia nunca, mientras que el correo sí se puede editar.
+ * Un formulario que llevara el correo en un campo oculto apuntaría al valor
+ * viejo si alguien lo acabara de cambiar.
+ */
+export async function resetUserPasswordById(userId: string, newPassword: string) {
+  if (newPassword.length < 8) {
+    throw new Error("La contraseña debe tener al menos 8 caracteres.");
+  }
+
+  return db.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(newPassword) },
+    select: { id: true, email: true, fullName: true },
+  });
+}

@@ -158,13 +158,17 @@ export async function createUserAsMaster(params: {
  * rueda del mouse sobre él reasignaba el rol de alguien, o lo movía de
  * consultorio, sin confirmación y sin que nadie se enterara.
  *
- * El correo NO se edita: es la identidad de acceso y es único en toda la
- * plataforma. Cambiarlo es dar de alta a otra persona, no corregir un dato.
+ * El correo SÍ se edita: si se capturó con un typo al dar de alta, no habría
+ * otra forma de corregirlo. Se valida que siga siendo único en la plataforma.
+ *
+ * El ALIAS no se edita nunca. Es lo que la persona teclea todos los días para
+ * entrar; cambiárselo la deja fuera sin aviso y sin que sepa por qué.
  */
 export async function updateUserAsMaster(
   userId: string,
   data: {
     fullName: string;
+    email: string;
     phone?: string | null;
     role: UserRoleName;
     organizationId: string;
@@ -173,8 +177,17 @@ export async function updateUserAsMaster(
 ) {
   const actual = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { organizationId: true, isPlatformAdmin: true },
+    select: { organizationId: true, isPlatformAdmin: true, email: true },
   });
+
+  const email = data.email.toLowerCase().trim();
+  if (!email) throw new Error("El correo es obligatorio.");
+
+  // Solo se comprueba si de verdad cambió: si no, chocaría consigo mismo.
+  if (email !== actual.email) {
+    const ocupado = await db.user.findUnique({ where: { email }, select: { id: true } });
+    if (ocupado) throw new Error(`El correo ${email} ya está en uso en la plataforma.`);
+  }
 
   const cambiaDeConsultorio = actual.organizationId !== data.organizationId;
 
@@ -195,13 +208,14 @@ export async function updateUserAsMaster(
       where: { id: userId },
       data: {
         fullName: data.fullName.trim(),
+        email,
         phone: data.phone?.trim() || null,
         primaryRole: data.role,
         organizationId: data.organizationId,
         isActive: data.isActive,
         status: data.isActive ? "ACTIVE" : "INACTIVE",
       },
-      select: { id: true, fullName: true, organizationId: true },
+      select: { id: true, fullName: true, email: true, organizationId: true },
     });
 
     if (cambiaDeConsultorio) {
@@ -261,7 +275,7 @@ export async function changeUserRole(userId: string, role: UserRoleName) {
     const user = await tx.user.update({
       where: { id: userId },
       data: { primaryRole: role },
-      select: { id: true, fullName: true, organizationId: true },
+      select: { id: true, fullName: true, email: true, organizationId: true },
     });
 
     await tx.clinicUser.updateMany({ where: { userId }, data: { role } });

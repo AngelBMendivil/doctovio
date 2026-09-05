@@ -7,7 +7,7 @@ import { createClinic, setClinicStatus, updateClinicPlan } from "@/lib/services/
 import { createProduct, updateProduct, subscribeClinic } from "@/lib/services/platform-catalog";
 import { generateBillingCycles, registerCyclePayment, waiveCycle } from "@/lib/services/platform-billing";
 import { createUserAsMaster, setUserActive, changeUserRole, moveUserToClinic, updateUserAsMaster } from "@/lib/services/platform-users";
-import { resetUserPasswordGlobal } from "@/lib/services/users";
+import { resetUserPasswordById } from "@/lib/services/users";
 import { logPlatform } from "@/lib/services/platform-audit";
 import type { BillingFrequency, ClinicStatus, PaymentMethod, UserRoleName } from "@prisma/client";
 
@@ -330,6 +330,7 @@ export async function updateUserAction(_p: MasterState, f: FormData): Promise<Ma
 
     const u = await updateUserAsMaster(userId, {
       fullName: str(f.get("fullName")),
+      email: str(f.get("email")),
       phone: str(f.get("phone")) || null,
       role: str(f.get("role")) as UserRoleName,
       organizationId,
@@ -342,7 +343,7 @@ export async function updateUserAction(_p: MasterState, f: FormData): Promise<Ma
       entity: "clinic_user",
       entityId: u.id,
       organizationId: u.organizationId,
-      metadata: { rol: str(f.get("role")), activo: isActive },
+      metadata: { rol: str(f.get("role")), activo: isActive, correo: u.email },
     });
 
     return `${u.fullName} actualizado.`;
@@ -407,10 +408,13 @@ export async function moveUserAction(_p: MasterState, f: FormData): Promise<Mast
 
 export async function resetPasswordAction(_p: MasterState, f: FormData): Promise<MasterState> {
   return run(async (masterUserId) => {
-    const email = str(f.get("email"));
+    // Por id y no por correo: el correo es editable y un campo oculto podría
+    // llevar el valor anterior si alguien acaba de cambiarlo.
+    const userId = str(f.get("userId"));
     const password = str(f.get("password"));
+    if (!userId) throw new Error("Falta el usuario.");
 
-    const u = await resetUserPasswordGlobal(email, password);
+    const u = await resetUserPasswordById(userId, password);
 
     // La contraseña NUNCA va a la bitácora, solo el hecho de que se cambió.
     await logPlatform({
