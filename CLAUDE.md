@@ -21,7 +21,7 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
-**Pruebas:** `npm test` — 138 de lógica pura en `tests/unit/`, 3 segundos, sin
+**Pruebas:** `npm test` — 141 de lógica pura en `tests/unit/`, 3 segundos, sin
 tocar la base. `npm run test:integration` — 73 contra la base de PRUEBAS
 (`doctovio_test`), ~70 s porque van por red. Cubren concurrencia y escrituras
 cruzadas entre consultorios, que es lo que no se puede probar de otra forma.
@@ -66,6 +66,19 @@ Next empaqueta los route handlers en la capa RSC y ahí `process.env` viene
 **Las citas se filtran por `startTime`, jamás por `scheduledDate`.**
 `scheduledDate` es solo fecha y se guarda como medianoche UTC: en zonas de
 México desplaza el día y las citas "desaparecen".
+
+**Y "hoy" también es el del consultorio.** `new Date().toISOString().slice(0,10)`
+da el día en UTC: en Tijuana cambia de día a las 5 de la tarde, y la sala de
+espera perdía a esa hora el panel de registro y toda la lista de atención —
+recepción se quedaba sin poder pasar pacientes ni mandar prerregistros en pleno
+turno vespertino. Usa `hoyEnZona(await getClinicTimezone(orgId))`. Estaba en la
+sala de espera, en consultas y en la pantalla de cobro.
+
+**Lo que NO se tocó:** la ventana del día en `listTodayBoard` sigue en la zona
+del servidor, y debe seguir así. Las horas de cita se guardan como si la zona
+del servidor fuera la del consultorio (`new Date("2026-09-04T18:00:00")` sin
+huso), así que mover la ventana a la zona real dejaría fuera las citas de la
+mañana. Las dos cosas hay que arreglarlas juntas o ninguna.
 
 **El día termina en la zona del CONSULTORIO, nunca en la del servidor.**
 Railway corre en UTC. `endOfAppointmentDay` usaba `setHours(23,59,59)` y en

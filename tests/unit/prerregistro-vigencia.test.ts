@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { finDelDiaEn, fechaEnZona } from "@/lib/utils/timezone";
+import { finDelDiaEn, fechaEnZona, hoyEnZona } from "@/lib/utils/timezone";
 import { preRegExpiry, MIN_HORAS_PREREGISTRO } from "@/lib/services/preregistration";
 
 /**
@@ -83,5 +83,30 @@ describe("preRegExpiry", () => {
     const manana = new Date("2026-09-05T16:00:00.000Z"); // 09:00 del 5, Tijuana
     const horas = (preRegExpiry(manana, "America/Tijuana", creado).getTime() - creado.getTime()) / 3_600_000;
     expect(horas).toBeGreaterThanOrEqual(MIN_HORAS_PREREGISTRO);
+  });
+});
+
+describe("qué día es HOY para el consultorio", () => {
+  /**
+   * A las 19:31 de Tijuana el servidor en UTC ya cree que es el día siguiente.
+   * Con esa cuenta, la sala de espera dejaba de mostrar el panel de registro y
+   * la lista de atención a partir de las 5 de la tarde: recepción se quedaba
+   * sin poder pasar pacientes ni reenviar prerregistros en pleno turno.
+   */
+  const laTardeDelCuatro = new Date("2026-09-05T02:31:00.000Z");
+
+  it("en Tijuana sigue siendo el día 4 cuando en UTC ya es 5", () => {
+    expect(hoyEnZona("America/Tijuana", laTardeDelCuatro)).toBe("2026-09-04");
+    expect(hoyEnZona("UTC", laTardeDelCuatro)).toBe("2026-09-05");
+  });
+
+  it("en el centro del país también, aunque el margen sea de una hora menos", () => {
+    expect(hoyEnZona("America/Mexico_City", laTardeDelCuatro)).toBe("2026-09-04");
+  });
+
+  it("devuelve siempre AAAA-MM-DD con ceros a la izquierda", () => {
+    // "2026-1-5" no compara igual que "2026-01-05", y todo el filtrado de
+    // pantallas se hace comparando estas cadenas.
+    expect(hoyEnZona("America/Mexico_City", new Date("2026-01-05T18:00:00.000Z"))).toBe("2026-01-05");
   });
 });

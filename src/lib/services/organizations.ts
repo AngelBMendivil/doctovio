@@ -135,3 +135,20 @@ export async function upsertMainBranch(
     },
   });
 }
+
+/**
+ * Zona horaria del consultorio. Es la respuesta a "¿qué día es hoy?" y a
+ * "¿cuándo termina el día?", que NO son preguntas que pueda contestar el
+ * servidor: Railway corre en UTC y en Tijuana eso adelanta el cambio de día
+ * siete horas.
+ *
+ * Sin configuración, la del centro del país: es donde está la mayoría, y es la
+ * que menos sorprende.
+ */
+export async function getClinicTimezone(organizationId: string): Promise<string> {
+  const s = await db.organizationSettings.findUnique({
+    where: { organizationId },
+    select: { timezone: true },
+  });
+  return s?.timezone || "America/Mexico_City";
+}

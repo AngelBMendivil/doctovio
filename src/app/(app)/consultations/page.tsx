@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Wallet, CheckCircle2 } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
+import { getClinicTimezone } from "@/lib/services/organizations";
+import { hoyEnZona } from "@/lib/utils/timezone";
 import { listConsultations } from "@/lib/services/consultations";
 import { calculateAge } from "@/lib/utils/age";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,8 +33,10 @@ export default async function ConsultationsPage({
   const session = await getSession();
   if (!session) return null;
 
-  // Por defecto, el día de hoy: la pantalla es de trabajo, no de archivo.
-  const today = new Date().toISOString().slice(0, 10);
+  // Por defecto, el día de hoy: la pantalla es de trabajo, no de archivo. El
+  // día es el del consultorio; el servidor está en UTC y por la tarde ya cree
+  // que es mañana.
+  const today = hoyEnZona(await getClinicTimezone(session.organizationId));
   const fromStr = searchParams.from || today;
   const toStr = searchParams.to || today;
   const isToday = fromStr === today && toStr === today;

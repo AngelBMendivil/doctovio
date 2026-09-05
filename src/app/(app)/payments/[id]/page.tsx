@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getClinicTimezone } from "@/lib/services/organizations";
+import { hoyEnZona } from "@/lib/utils/timezone";
 import { getConsultationForPayment } from "@/lib/services/billing";
 import { calculateAge } from "@/lib/utils/age";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +18,10 @@ export default async function PaymentDetailPage({ params }: { params: { id: stri
   if (!data) notFound();
 
   const { consultation, basePriceMxn, basePriceUsd, currency, insurers, patientInsurerId } = data;
-  const today = new Date().toISOString().slice(0, 10);
+  // Fecha propuesta del cobro: la de hoy EN EL CONSULTORIO. Con la del
+  // servidor, un cobro de la tarde en Tijuana se proponía con la fecha de
+  // mañana y así quedaba en el corte del día.
+  const today = hoyEnZona(await getClinicTimezone(session.organizationId));
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

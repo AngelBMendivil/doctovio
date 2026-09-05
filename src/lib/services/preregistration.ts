@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { generateSecureToken } from "@/lib/utils/tokens";
 import { finDelDiaEn } from "@/lib/utils/timezone";
+import { getClinicTimezone } from "@/lib/services/organizations";
 import { logAudit } from "@/lib/services/audit";
 import { getInsurer, linkPatientInsurance } from "@/lib/services/insurers";
 import { createAppointment } from "@/lib/services/appointments";
@@ -46,14 +47,7 @@ export function preRegExpiry(startTime: Date, timezone: string, ahora = new Date
   return finDelDia > piso ? finDelDia : piso;
 }
 
-/** Zona del consultorio. Sin configuración, la del centro del país. */
-async function zonaDelConsultorio(organizationId: string): Promise<string> {
-  const s = await db.organizationSettings.findUnique({
-    where: { organizationId },
-    select: { timezone: true },
-  });
-  return s?.timezone || "America/Mexico_City";
-}
+
 
 /** Genera el siguiente número de expediente consecutivo por organización. */
 async function nextRecordNumber(organizationId: string): Promise<string> {
@@ -167,7 +161,7 @@ export async function bookFirstTimeIntake(
       type: "PRE_REGISTRATION",
       token,
       status: "GENERATED",
-      expiresAt: preRegExpiry(appointment.startTime, await zonaDelConsultorio(organizationId)),
+      expiresAt: preRegExpiry(appointment.startTime, await getClinicTimezone(organizationId)),
       patientId: patient.id,
       appointmentId: appointment.id,
     },
@@ -198,7 +192,7 @@ export async function getOrCreateAppointmentPreRegToken(organizationId: string, 
       type: "PRE_REGISTRATION",
       token,
       status: "GENERATED",
-      expiresAt: preRegExpiry(appt.startTime, await zonaDelConsultorio(organizationId)),
+      expiresAt: preRegExpiry(appt.startTime, await getClinicTimezone(organizationId)),
       patientId: appt.patientId,
       appointmentId: appt.id,
     },

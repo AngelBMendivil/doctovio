@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
+import { getClinicTimezone } from "@/lib/services/organizations";
+import { hoyEnZona } from "@/lib/utils/timezone";
 import { listTodayBoard } from "@/lib/services/appointments";
 import { listDoctors } from "@/lib/services/users";
 import { registerArrivalAction, startConsultationAction } from "@/lib/actions/visits";
@@ -33,7 +35,12 @@ export default async function WaitingRoomPage({ searchParams }: { searchParams: 
   const session = await getSession();
   if (!session) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
+  // "Hoy" es el día del CONSULTORIO, no el del servidor. Railway corre en UTC:
+  // con `toISOString()` la sala de espera cambiaba de día a las 5 de la tarde
+  // en Tijuana, y a partir de esa hora desaparecían el panel de registro y toda
+  // la lista de atención — recepción se quedaba sin poder pasar pacientes ni
+  // mandar prerregistros justo en el turno de la tarde.
+  const today = hoyEnZona(await getClinicTimezone(session.organizationId));
   const dateStr = searchParams.date || today;
   const isToday = dateStr === today;
   const canClinical = session.role === "ADMIN" || session.role === "DOCTOR";

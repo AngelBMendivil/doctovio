@@ -99,3 +99,16 @@ export function finDelDiaEn(instante: Date, zona: string): Date {
   const { y, m, d } = fechaEnZona(instante, zona);
   return instanteDeParedEn(y, m, d, 23, 59, 59, 999, zona);
 }
+
+/**
+ * El día de HOY en esa zona, como AAAA-MM-DD.
+ *
+ * Sustituye a `new Date().toISOString().slice(0, 10)`, que devuelve el día en
+ * UTC. En Tijuana eso cambia de día a las 5 de la tarde: a partir de esa hora,
+ * cualquier pantalla que compare contra "hoy" cree que ya es mañana y deja de
+ * mostrar el día que la gente está viviendo.
+ */
+export function hoyEnZona(zona: string, ahora = new Date()): string {
+  const { y, m, d } = fechaEnZona(ahora, zona);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
