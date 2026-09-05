@@ -102,11 +102,14 @@ function ProfileMenu({ session, initials }: { session: SessionPayload; initials:
 export function AppShell({
   session,
   pendingConversations = 0,
+  dental = false,
   children,
 }: {
   session: SessionPayload;
   /** Conversaciones de WhatsApp esperando a una persona. */
   pendingConversations?: number;
+  /** El consultorio es dental: habilita las entradas del módulo. */
+  dental?: boolean;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -135,7 +138,7 @@ export function AppShell({
         )}
       >
         <div className="sticky top-0 h-screen">
-          <Sidebar session={session} collapsed={collapsed} />
+          <Sidebar session={session} collapsed={collapsed} dental={dental} />
         </div>
       </aside>
 
@@ -151,7 +154,7 @@ export function AppShell({
             >
               <X className="h-5 w-5" />
             </button>
-            <Sidebar session={session} onNavigate={() => setMobileOpen(false)} />
+            <Sidebar session={session} dental={dental} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}

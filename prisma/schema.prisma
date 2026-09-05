@@ -383,17 +383,17 @@ enum ClinicStatus {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   /// Código corto y permanente del consultorio: CLP, DSO, CMV.
   ///
   /// INMUTABLE. Va dentro del nombre de acceso de cada usuario secundario
   /// (`clp.carlos`), así que cambiarlo dejaría a esa gente sin poder entrar.
   /// Por eso NO cambia aunque se renombre el consultorio, y ninguna pantalla
   /// permite editarlo después del alta.
-  code      String   @unique
+  code      String  @unique
   name      String
-  legalName String?  @map("legal_name")
-  logoUrl   String?  @map("logo_url")
+  legalName String? @map("legal_name")
+  logoUrl   String? @map("logo_url")
 
   /// Puede operar ahora mismo. Es la bandera que consultan el middleware, el
   /// enrutamiento de WhatsApp y el cron: por eso se conserva y no se sustituye
@@ -403,7 +403,7 @@ model Organization {
   /// dos se escriben JUNTAS, siempre desde `setClinicStatus()`. Nunca actualices
   /// una sin la otra o el consultorio queda en un estado imposible: suspendido
   /// en el panel pero operando en la práctica.
-  isActive  Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
   // --- Comercial (lo administra el operador de plataforma) ---
   type          ClinicType   @default(MEDICAL)
@@ -421,39 +421,43 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  branches           Branch[]
-  users              User[]
-  settings           OrganizationSettings?
-  roles              Role[]
-  patients           Patient[]
-  appointments       Appointment[]
-  visits             Visit[]
-  consultations      Consultation[]
-  prescriptions      Prescription[]
-  medicalOrders      MedicalOrder[]
-  documents          PatientDocument[]
-  fileAssets         FileAsset[]
-  referralsSent      MedicalReferral[]      @relation("ReferralOrgFrom")
-  referralsReceived  MedicalReferral[]      @relation("ReferralOrgTo")
-  notificationLogs   NotificationLog[]
-  notificationTpls   NotificationTemplate[]
-  publicFormTokens   PublicFormToken[]
-  auditLogs          AuditLog[]
-  doctorProfiles     DoctorProfile[]
-  insurers           Insurer[]
-  payments           Payment[]
-  doctorSchedules    DoctorSchedule[]
-  scheduleBlocks     ScheduleBlock[]
-  appointmentHolds   AppointmentHold[]
-  conversations      ConversationSession[]
-  googleCalendars    GoogleCalendarConnection[]
-  reminderJobs       ReminderJob[]
+  branches            Branch[]
+  users               User[]
+  settings            OrganizationSettings?
+  roles               Role[]
+  patients            Patient[]
+  appointments        Appointment[]
+  visits              Visit[]
+  consultations       Consultation[]
+  prescriptions       Prescription[]
+  medicalOrders       MedicalOrder[]
+  documents           PatientDocument[]
+  fileAssets          FileAsset[]
+  referralsSent       MedicalReferral[]          @relation("ReferralOrgFrom")
+  referralsReceived   MedicalReferral[]          @relation("ReferralOrgTo")
+  notificationLogs    NotificationLog[]
+  notificationTpls    NotificationTemplate[]
+  publicFormTokens    PublicFormToken[]
+  auditLogs           AuditLog[]
+  doctorProfiles      DoctorProfile[]
+  insurers            Insurer[]
+  payments            Payment[]
+  doctorSchedules     DoctorSchedule[]
+  scheduleBlocks      ScheduleBlock[]
+  appointmentHolds    AppointmentHold[]
+  conversations       ConversationSession[]
+  googleCalendars     GoogleCalendarConnection[]
+  reminderJobs        ReminderJob[]
   whatsappConnections WhatsappConnection[]
-  clinicPayments     ClinicPayment[]
-  odontogramEntries  OdontogramEntry[]
-  subscriptions      Subscription[]
-  billingCycles      BillingCycle[]
-  clinicUsers        ClinicUser[]
+  clinicPayments      ClinicPayment[]
+  odontogramEntries   OdontogramEntry[]
+  catalogCategories   CatalogCategory[]
+  catalogItems        CatalogItem[]
+  treatmentPlanItems  TreatmentPlanItem[]
+  quotes              Quote[]
+  subscriptions       Subscription[]
+  billingCycles       BillingCycle[]
+  clinicUsers         ClinicUser[]
 
   @@index([status])
   @@map("organizations")
@@ -658,7 +662,7 @@ model Branch {
   createdBy      String?  @map("created_by")
   updatedBy      String?  @map("updated_by")
 
-  organization Organization  @relation(fields: [organizationId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id])
   appointments Appointment[]
   visits       Visit[]
   schedules    DoctorSchedule[]
@@ -668,35 +672,35 @@ model Branch {
 }
 
 model OrganizationSettings {
-  id                     String   @id @default(cuid())
-  organizationId         String   @unique @map("organization_id")
-  timezone               String   @default("America/Mexico_City")
-  currency               String   @default("MXN")
-  language               String   @default("es")
-  defaultAppointmentMin  Int      @default(30) @map("default_appointment_minutes")
-  toleranceMinutes       Int      @default(10) @map("tolerance_minutes")
-  appointmentTypesJson   Json?    @map("appointment_types_json")
-  consultationTypesJson  Json?    @map("consultation_types_json")
-  specialtiesJson        Json?    @map("specialties_json")
-  officeHoursJson        Json?    @map("office_hours_json")
-  privacyNoticeHtml      String?  @map("privacy_notice_html")
-  consentTemplatesJson   Json?    @map("consent_templates_json")
-  prescriptionTemplate   Json?    @map("prescription_template_json")
-  emailTemplatesJson     Json?    @map("email_templates_json")
-  whatsappEnabled        Boolean  @default(false) @map("whatsapp_enabled")
-  basePriceMxn           Float?   @map("base_price_mxn")
-  basePriceUsd           Float?   @map("base_price_usd")
+  id                    String  @id @default(cuid())
+  organizationId        String  @unique @map("organization_id")
+  timezone              String  @default("America/Mexico_City")
+  currency              String  @default("MXN")
+  language              String  @default("es")
+  defaultAppointmentMin Int     @default(30) @map("default_appointment_minutes")
+  toleranceMinutes      Int     @default(10) @map("tolerance_minutes")
+  appointmentTypesJson  Json?   @map("appointment_types_json")
+  consultationTypesJson Json?   @map("consultation_types_json")
+  specialtiesJson       Json?   @map("specialties_json")
+  officeHoursJson       Json?   @map("office_hours_json")
+  privacyNoticeHtml     String? @map("privacy_notice_html")
+  consentTemplatesJson  Json?   @map("consent_templates_json")
+  prescriptionTemplate  Json?   @map("prescription_template_json")
+  emailTemplatesJson    Json?   @map("email_templates_json")
+  whatsappEnabled       Boolean @default(false) @map("whatsapp_enabled")
+  basePriceMxn          Float?  @map("base_price_mxn")
+  basePriceUsd          Float?  @map("base_price_usd")
 
   // --- Reglas de agenda (las aplica el motor antes de ofrecer un horario) ---
-  slotGranularityMin     Int      @default(15) @map("slot_granularity_min") // cada cuánto empieza un espacio
-  bufferMinutes          Int      @default(0)  @map("buffer_minutes")       // descanso entre consultas
-  minLeadMinutes         Int      @default(120) @map("min_lead_minutes")    // anticipación mínima para agendar
-  maxAdvanceDays         Int      @default(90) @map("max_advance_days")     // hasta cuándo se puede agendar
-  cancelMinHours         Int      @default(4)  @map("cancel_min_hours")     // anticipación mínima para cancelar
-  holdMinutes            Int      @default(5)  @map("hold_minutes")         // vida de la reserva temporal
-  reminderHoursBefore    Int[]    @default([24]) @map("reminder_hours_before")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  slotGranularityMin  Int      @default(15) @map("slot_granularity_min") // cada cuánto empieza un espacio
+  bufferMinutes       Int      @default(0) @map("buffer_minutes") // descanso entre consultas
+  minLeadMinutes      Int      @default(120) @map("min_lead_minutes") // anticipación mínima para agendar
+  maxAdvanceDays      Int      @default(90) @map("max_advance_days") // hasta cuándo se puede agendar
+  cancelMinHours      Int      @default(4) @map("cancel_min_hours") // anticipación mínima para cancelar
+  holdMinutes         Int      @default(5) @map("hold_minutes") // vida de la reserva temporal
+  reminderHoursBefore Int[]    @default([24]) @map("reminder_hours_before")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -708,8 +712,8 @@ model OrganizationSettings {
 // ============================================================================
 
 model User {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
 
   /// Correo. OBLIGATORIO para todos, incluidos los secundarios.
   ///
@@ -718,7 +722,7 @@ model User {
   /// puede recuperar pidiéndole al Master que la toque a mano no es
   /// recuperable de verdad.
   /// (la unicidad la declara el `@@unique([email])` de abajo)
-  email          String
+  email String
 
   /// Alias corto de acceso: `clp.carlos`. Opcional.
   ///
@@ -730,12 +734,12 @@ model User {
   ///
   /// NO lleva el rol adentro a propósito: si la secretaria pasa a
   /// administrativa conserva `clp.carlos` y solo cambia `primaryRole`.
-  username       String?      @unique
+  username String? @unique
 
-  passwordHash   String       @map("password_hash")
-  fullName       String       @map("full_name")
-  phone          String?
-  primaryRole    UserRoleName @map("primary_role")
+  passwordHash String       @map("password_hash")
+  fullName     String       @map("full_name")
+  phone        String?
+  primaryRole  UserRoleName @map("primary_role")
 
   /// Operador de la plataforma (el "usuario maestro").
   ///
@@ -748,34 +752,39 @@ model User {
   /// consultorio y operador de plataforma, sin que una cosa contamine la otra.
   /// Da acceso a /admin; NO da acceso a los datos clínicos de ningún
   /// consultorio.
-  isPlatformAdmin Boolean     @default(false) @map("is_platform_admin")
+  isPlatformAdmin Boolean @default(false) @map("is_platform_admin")
 
-  status         UserStatus   @default(ACTIVE)
-  lastLoginAt    DateTime?    @map("last_login_at")
-  isActive       Boolean      @default(true) @map("is_active")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  createdBy      String?      @map("created_by")
-  updatedBy      String?      @map("updated_by")
+  status      UserStatus @default(ACTIVE)
+  lastLoginAt DateTime?  @map("last_login_at")
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  createdBy   String?    @map("created_by")
+  updatedBy   String?    @map("updated_by")
 
-  organization        Organization         @relation(fields: [organizationId], references: [id])
-  doctorProfile        DoctorProfile?
+  organization          Organization              @relation(fields: [organizationId], references: [id])
+  doctorProfile         DoctorProfile?
   userRoles             UserRole[]
-  appointmentsCreated   Appointment[]        @relation("AppointmentCreatedBy")
-  appointmentsAsDoctor  Appointment[]        @relation("AppointmentDoctor")
-  visitsAsDoctor        Visit[]              @relation("VisitDoctor")
-  consultationsAsDoctor Consultation[]       @relation("ConsultationDoctor")
-  prescriptionsIssued   Prescription[]       @relation("PrescriptionDoctor")
-  medicalOrdersIssued   MedicalOrder[]       @relation("MedicalOrderDoctor")
-  documentsUploaded     PatientDocument[]    @relation("DocumentUploadedBy")
-  referralsFromDoctor   MedicalReferral[]    @relation("ReferralFromDoctor")
-  referralsToDoctor     MedicalReferral[]    @relation("ReferralToDoctor")
+  appointmentsCreated   Appointment[]             @relation("AppointmentCreatedBy")
+  appointmentsAsDoctor  Appointment[]             @relation("AppointmentDoctor")
+  visitsAsDoctor        Visit[]                   @relation("VisitDoctor")
+  consultationsAsDoctor Consultation[]            @relation("ConsultationDoctor")
+  prescriptionsIssued   Prescription[]            @relation("PrescriptionDoctor")
+  medicalOrdersIssued   MedicalOrder[]            @relation("MedicalOrderDoctor")
+  documentsUploaded     PatientDocument[]         @relation("DocumentUploadedBy")
+  referralsFromDoctor   MedicalReferral[]         @relation("ReferralFromDoctor")
+  referralsToDoctor     MedicalReferral[]         @relation("ReferralToDoctor")
   auditLogs             AuditLog[]
   schedules             DoctorSchedule[]
   scheduleBlocks        ScheduleBlock[]
   appointmentHolds      AppointmentHold[]
   googleCalendar        GoogleCalendarConnection?
   clinicUsers           ClinicUser[]
+  odontogramEntries     OdontogramEntry[]
+  treatmentsCreated     TreatmentPlanItem[]       @relation("TreatmentCreatedBy")
+  treatmentsCompleted   TreatmentPlanItem[]       @relation("TreatmentCompletedBy")
+  quotesCreated         Quote[]                   @relation("QuoteCreatedBy")
+  quotesDecided         Quote[]                   @relation("QuoteDecidedBy")
 
   /// El correo identifica a la PERSONA en toda la plataforma, no dentro de un
   /// consultorio. Sin esta restricción, dos consultorios podían tener el mismo
@@ -788,7 +797,6 @@ model User {
   @@unique([organizationId, email])
   @@index([organizationId])
   @@map("users")
-  odontogramEntries     OdontogramEntry[]
 }
 
 model Role {
@@ -800,9 +808,9 @@ model Role {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization      Organization?     @relation(fields: [organizationId], references: [id])
-  rolePermissions    RolePermission[]
-  userRoles          UserRole[]
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
 
   @@index([organizationId])
   @@map("roles")
@@ -842,30 +850,30 @@ model UserRole {
 }
 
 model DoctorProfile {
-  id                   String   @id @default(cuid())
-  organizationId       String   @map("organization_id")
-  userId               String   @unique @map("user_id")
-  specialty            String?
-  subspecialty         String?
-  licenseNumber        String?  @map("license_number") // cédula profesional
-  specialtyLicense     String?  @map("specialty_license") // cédula de especialidad
-  licensesText         String?  @map("licenses_text") // cédulas libres, una por línea (institución + tipo + número)
-  ssaNumber            String?  @map("ssa_number") // registro S.S.A. (Secretaría de Salud)
-  stateRegistration    String?  @map("state_registration") // REG. EDO. (registro estatal)
-  rfc                  String?  // RFC del médico (fiscal)
-  signatureImageUrl    String?  @map("signature_image_url")
-  photoUrl             String?  @map("photo_url")
-  bio                  String?
-  professionalPhone    String?  @map("professional_phone")
-  professionalEmail    String?  @map("professional_email")
-  modality             String?  // presencial / remoto / mixto
-  acceptsReferrals     Boolean  @default(true) @map("accepts_referrals")
-  listedInDirectory    Boolean  @default(true) @map("listed_in_directory")
-  city                 String?
-  state                String?
-  isActive             Boolean  @default(true) @map("is_active")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  userId            String   @unique @map("user_id")
+  specialty         String?
+  subspecialty      String?
+  licenseNumber     String?  @map("license_number") // cédula profesional
+  specialtyLicense  String?  @map("specialty_license") // cédula de especialidad
+  licensesText      String?  @map("licenses_text") // cédulas libres, una por línea (institución + tipo + número)
+  ssaNumber         String?  @map("ssa_number") // registro S.S.A. (Secretaría de Salud)
+  stateRegistration String?  @map("state_registration") // REG. EDO. (registro estatal)
+  rfc               String? // RFC del médico (fiscal)
+  signatureImageUrl String?  @map("signature_image_url")
+  photoUrl          String?  @map("photo_url")
+  bio               String?
+  professionalPhone String?  @map("professional_phone")
+  professionalEmail String?  @map("professional_email")
+  modality          String? // presencial / remoto / mixto
+  acceptsReferrals  Boolean  @default(true) @map("accepts_referrals")
+  listedInDirectory Boolean  @default(true) @map("listed_in_directory")
+  city              String?
+  state             String?
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   user         User         @relation(fields: [userId], references: [id])
@@ -880,61 +888,64 @@ model DoctorProfile {
 // ============================================================================
 
 model Patient {
-  id              String         @id @default(cuid())
-  organizationId  String         @map("organization_id")
-  recordNumber    String         @map("record_number") // número de expediente
-  firstName       String         @map("first_name")
-  lastLastName    String         @map("last_name_1")
-  secondLastName  String?        @map("last_name_2")
-  birthDate       DateTime       @map("birth_date")
-  sex             PatientSex
-  gender          String?
-  curp            String?
-  phone           String?
-  email           String?
-  address         String?
-  city            String?
-  state           String?
-  postalCode      String?        @map("postal_code")
-  country         String?        @default("MX")
-  occupation      String?
-  maritalStatus   MaritalStatus? @map("marital_status")
-  photoUrl        String?        @map("photo_url")
-  adminNotes      String?        @map("admin_notes")
-  status          PatientStatus  @default(ACTIVE)
-  possibleDuplicateOfId String?  @map("possible_duplicate_of_id")
-  admittedAt      DateTime       @default(now()) @map("admitted_at")
-  dischargedAt    DateTime?      @map("discharged_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  createdBy       String?        @map("created_by")
-  updatedBy       String?        @map("updated_by")
+  id                    String         @id @default(cuid())
+  organizationId        String         @map("organization_id")
+  recordNumber          String         @map("record_number") // número de expediente
+  firstName             String         @map("first_name")
+  lastLastName          String         @map("last_name_1")
+  secondLastName        String?        @map("last_name_2")
+  birthDate             DateTime       @map("birth_date")
+  sex                   PatientSex
+  gender                String?
+  curp                  String?
+  phone                 String?
+  email                 String?
+  address               String?
+  city                  String?
+  state                 String?
+  postalCode            String?        @map("postal_code")
+  country               String?        @default("MX")
+  occupation            String?
+  maritalStatus         MaritalStatus? @map("marital_status")
+  photoUrl              String?        @map("photo_url")
+  adminNotes            String?        @map("admin_notes")
+  status                PatientStatus  @default(ACTIVE)
+  possibleDuplicateOfId String?        @map("possible_duplicate_of_id")
+  admittedAt            DateTime       @default(now()) @map("admitted_at")
+  dischargedAt          DateTime?      @map("discharged_at")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+  createdBy             String?        @map("created_by")
+  updatedBy             String?        @map("updated_by")
 
-  organization        Organization                 @relation(fields: [organizationId], references: [id])
-  possibleDuplicateOf  Patient?                     @relation("PatientDuplicate", fields: [possibleDuplicateOfId], references: [id])
-  duplicateCandidates  Patient[]                    @relation("PatientDuplicate")
-  responsibleContacts  PatientResponsibleContact[]
-  emergencyContacts    PatientEmergencyContact[]
-  source               PatientSource?
-  insurances           PatientInsurance[]
-  consents             PatientConsent[]
-  alerts               PatientAlert[]
-  medicalProfile       MedicalProfile?
-  medicalHistory       MedicalHistory?
-  allergies            Allergy[]
-  chronicConditions    ChronicCondition[]
-  currentMedications   CurrentMedication[]
-  vaccinations         Vaccination[]
-  appointments         Appointment[]
-  visits               Visit[]
-  consultations        Consultation[]
-  prescriptions        Prescription[]
-  medicalOrders        MedicalOrder[]
-  documents            PatientDocument[]
-  referrals            MedicalReferral[]
-  publicFormTokens     PublicFormToken[]
-  payments             Payment[]
-  conversations        ConversationSession[]
+  organization        Organization                @relation(fields: [organizationId], references: [id])
+  possibleDuplicateOf Patient?                    @relation("PatientDuplicate", fields: [possibleDuplicateOfId], references: [id])
+  duplicateCandidates Patient[]                   @relation("PatientDuplicate")
+  responsibleContacts PatientResponsibleContact[]
+  emergencyContacts   PatientEmergencyContact[]
+  source              PatientSource?
+  insurances          PatientInsurance[]
+  consents            PatientConsent[]
+  alerts              PatientAlert[]
+  medicalProfile      MedicalProfile?
+  medicalHistory      MedicalHistory?
+  allergies           Allergy[]
+  chronicConditions   ChronicCondition[]
+  currentMedications  CurrentMedication[]
+  vaccinations        Vaccination[]
+  appointments        Appointment[]
+  visits              Visit[]
+  consultations       Consultation[]
+  prescriptions       Prescription[]
+  medicalOrders       MedicalOrder[]
+  documents           PatientDocument[]
+  referrals           MedicalReferral[]
+  publicFormTokens    PublicFormToken[]
+  payments            Payment[]
+  conversations       ConversationSession[]
+  odontogramEntries   OdontogramEntry[]
+  treatmentPlanItems  TreatmentPlanItem[]
+  quotes              Quote[]
 
   @@unique([organizationId, recordNumber])
   @@index([organizationId, status])
@@ -942,22 +953,21 @@ model Patient {
   @@index([organizationId, phone])
   @@index([organizationId, curp])
   @@map("patients")
-  odontogramEntries     OdontogramEntry[]
 }
 
 model PatientResponsibleContact {
-  id                  String   @id @default(cuid())
-  patientId           String   @map("patient_id")
-  fullName            String   @map("full_name")
-  relationship        String
-  phone               String?
-  email                String?
-  isPrimaryContact     Boolean  @default(false) @map("is_primary_contact")
-  canReceiveNotifications Boolean @default(true) @map("can_receive_notifications")
-  notes               String?
-  isActive            Boolean  @default(true) @map("is_active")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                      String   @id @default(cuid())
+  patientId               String   @map("patient_id")
+  fullName                String   @map("full_name")
+  relationship            String
+  phone                   String?
+  email                   String?
+  isPrimaryContact        Boolean  @default(false) @map("is_primary_contact")
+  canReceiveNotifications Boolean  @default(true) @map("can_receive_notifications")
+  notes                   String?
+  isActive                Boolean  @default(true) @map("is_active")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -982,13 +992,13 @@ model PatientEmergencyContact {
 }
 
 model PatientSource {
-  id            String            @id @default(cuid())
-  patientId     String            @unique @map("patient_id")
-  sourceType    PatientSourceType @map("source_type")
-  referringDoctorId String?       @map("referring_doctor_id")
-  notes         String?
-  createdAt     DateTime          @default(now()) @map("created_at")
-  updatedAt     DateTime          @updatedAt @map("updated_at")
+  id                String            @id @default(cuid())
+  patientId         String            @unique @map("patient_id")
+  sourceType        PatientSourceType @map("source_type")
+  referringDoctorId String?           @map("referring_doctor_id")
+  notes             String?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1085,25 +1095,25 @@ model PatientAlert {
 // ============================================================================
 
 model MedicalProfile {
-  id                  String    @id @default(cuid())
-  patientId           String    @unique @map("patient_id")
-  bloodType            String?   @map("blood_type")
-  isPregnant           Boolean?  @map("is_pregnant")
-  hasDisability        Boolean?  @map("has_disability")
-  disabilityNotes      String?   @map("disability_notes")
-  attendingDoctorId    String?   @map("attending_doctor_id")
-  lastVisitAt          DateTime? @map("last_visit_at")
-  nextAppointmentAt    DateTime? @map("next_appointment_at")
-  relevantConditions   String?   @map("relevant_conditions")
+  id                 String    @id @default(cuid())
+  patientId          String    @unique @map("patient_id")
+  bloodType          String?   @map("blood_type")
+  isPregnant         Boolean?  @map("is_pregnant")
+  hasDisability      Boolean?  @map("has_disability")
+  disabilityNotes    String?   @map("disability_notes")
+  attendingDoctorId  String?   @map("attending_doctor_id")
+  lastVisitAt        DateTime? @map("last_visit_at")
+  nextAppointmentAt  DateTime? @map("next_appointment_at")
+  relevantConditions String?   @map("relevant_conditions")
 
   // Declaraciones explícitas de ausencia. Distinguen "el paciente declaró no
   // tener" de "nadie preguntó": en la práctica médica se escribe "negadas", y
   // un vacío ambiguo en alergias es un riesgo real al recetar.
-  allergiesNegated     Boolean   @default(false) @map("allergies_negated")
-  chronicNegated       Boolean   @default(false) @map("chronic_negated")
+  allergiesNegated Boolean @default(false) @map("allergies_negated")
+  chronicNegated   Boolean @default(false) @map("chronic_negated")
 
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1111,48 +1121,48 @@ model MedicalProfile {
 }
 
 model MedicalHistory {
-  id                        String   @id @default(cuid())
-  patientId                 String   @unique @map("patient_id")
+  id                      String    @id @default(cuid())
+  patientId               String    @unique @map("patient_id")
   // Antecedentes heredofamiliares
-  familyDiabetes             Boolean? @map("family_diabetes")
-  familyHypertension         Boolean? @map("family_hypertension")
-  familyCancer               Boolean? @map("family_cancer")
-  familyHeartDisease         Boolean? @map("family_heart_disease")
-  familyHereditaryDisease    Boolean? @map("family_hereditary_disease")
-  familyOthers               String?  @map("family_others")
+  familyDiabetes          Boolean?  @map("family_diabetes")
+  familyHypertension      Boolean?  @map("family_hypertension")
+  familyCancer            Boolean?  @map("family_cancer")
+  familyHeartDisease      Boolean?  @map("family_heart_disease")
+  familyHereditaryDisease Boolean?  @map("family_hereditary_disease")
+  familyOthers            String?   @map("family_others")
   /// El paciente declaró no tener antecedentes familiares relevantes.
   /// Distinto de haber dejado la sección en blanco.
-  familyNegated              Boolean  @default(false) @map("family_negated")
+  familyNegated           Boolean   @default(false) @map("family_negated")
   // Antecedentes personales patológicos
-  priorDiseases               String?  @map("prior_diseases")
-  chronicDiseasesNotes         String?  @map("chronic_diseases_notes")
-  surgeriesNotes                String?  @map("surgeries_notes")
-  hospitalizationsNotes         String?  @map("hospitalizations_notes")
-  fracturesNotes                 String?  @map("fractures_notes")
-  transfusionsNotes               String?  @map("transfusions_notes")
-  relevantInfectionsNotes          String?  @map("relevant_infections_notes")
+  priorDiseases           String?   @map("prior_diseases")
+  chronicDiseasesNotes    String?   @map("chronic_diseases_notes")
+  surgeriesNotes          String?   @map("surgeries_notes")
+  hospitalizationsNotes   String?   @map("hospitalizations_notes")
+  fracturesNotes          String?   @map("fractures_notes")
+  transfusionsNotes       String?   @map("transfusions_notes")
+  relevantInfectionsNotes String?   @map("relevant_infections_notes")
   // Antecedentes personales no patológicos
-  diet                        String?
-  exercise                    String?
-  smoking                     String?
-  alcohol                     String?
-  substanceUse                String?  @map("substance_use")
-  housing                     String?
-  hygiene                     String?
-  occupationExposure          String?  @map("occupation_exposure")
+  diet                    String?
+  exercise                String?
+  smoking                 String?
+  alcohol                 String?
+  substanceUse            String?   @map("substance_use")
+  housing                 String?
+  hygiene                 String?
+  occupationExposure      String?   @map("occupation_exposure")
   // Gineco-obstétricos
-  menarche                    String?
-  menstrualCycle               String?  @map("menstrual_cycle")
-  pregnancies                  Int?
-  deliveries                   Int?
-  cSections                    Int?     @map("c_sections")
-  abortions                    Int?
-  lastMenstrualPeriod          DateTime? @map("last_menstrual_period")
-  contraceptiveMethod          String?  @map("contraceptive_method")
-  isMenopausal                 Boolean? @map("is_menopausal")
-  createdAt                    DateTime @default(now()) @map("created_at")
-  updatedAt                    DateTime @updatedAt @map("updated_at")
-  updatedBy                    String?  @map("updated_by")
+  menarche                String?
+  menstrualCycle          String?   @map("menstrual_cycle")
+  pregnancies             Int?
+  deliveries              Int?
+  cSections               Int?      @map("c_sections")
+  abortions               Int?
+  lastMenstrualPeriod     DateTime? @map("last_menstrual_period")
+  contraceptiveMethod     String?   @map("contraceptive_method")
+  isMenopausal            Boolean?  @map("is_menopausal")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  updatedBy               String?   @map("updated_by")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1160,14 +1170,14 @@ model MedicalHistory {
 }
 
 model Allergy {
-  id          String   @id @default(cuid())
-  patientId   String   @map("patient_id")
-  substance   String
-  reaction    String?
-  severity    AlertSeverity @default(MEDIUM)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String        @id @default(cuid())
+  patientId String        @map("patient_id")
+  substance String
+  reaction  String?
+  severity  AlertSeverity @default(MEDIUM)
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1176,14 +1186,14 @@ model Allergy {
 }
 
 model ChronicCondition {
-  id          String   @id @default(cuid())
-  patientId   String   @map("patient_id")
+  id          String    @id @default(cuid())
+  patientId   String    @map("patient_id")
   name        String
   diagnosedAt DateTime? @map("diagnosed_at")
   notes       String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1192,18 +1202,18 @@ model ChronicCondition {
 }
 
 model CurrentMedication {
-  id             String    @id @default(cuid())
-  patientId      String    @map("patient_id")
-  name           String
-  dose           String?
-  frequency      String?
-  reason         String?
-  startDate      DateTime? @map("start_date")
-  prescribedById  String?   @map("prescribed_by_id") // médico que indicó (interno u externo, texto libre si externo)
-  prescribedByName String? @map("prescribed_by_name")
-  isActive       Boolean   @default(true) @map("is_active")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(cuid())
+  patientId        String    @map("patient_id")
+  name             String
+  dose             String?
+  frequency        String?
+  reason           String?
+  startDate        DateTime? @map("start_date")
+  prescribedById   String?   @map("prescribed_by_id") // médico que indicó (interno u externo, texto libre si externo)
+  prescribedByName String?   @map("prescribed_by_name")
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1212,14 +1222,14 @@ model CurrentMedication {
 }
 
 model Vaccination {
-  id          String    @id @default(cuid())
-  patientId   String    @map("patient_id")
-  vaccine     String
-  appliedAt   DateTime  @map("applied_at")
-  doseNumber  String?   @map("dose_number")
-  notes       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  patientId  String   @map("patient_id")
+  vaccine    String
+  appliedAt  DateTime @map("applied_at")
+  doseNumber String?  @map("dose_number")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -1232,27 +1242,27 @@ model Vaccination {
 // ============================================================================
 
 model Appointment {
-  id             String             @id @default(cuid())
-  organizationId String             @map("organization_id")
-  branchId       String?            @map("branch_id")
-  patientId      String             @map("patient_id")
-  doctorId       String             @map("doctor_id")
-  scheduledDate  DateTime           @map("scheduled_date") // fecha (día)
-  startTime      DateTime           @map("start_time")
-  durationMinutes Int               @default(30) @map("duration_minutes")
-  type           AppointmentType
-  reason         String?
-  channel        AppointmentChannel @default(PHONE) // origen de la cita
-  status         AppointmentStatus  @default(TO_CONFIRM)
-  notes          String?
-  isOverbooked   Boolean            @default(false) @map("is_overbooked")
-  createdById    String             @map("created_by_id")
-  isActive       Boolean            @default(true) @map("is_active")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
+  id              String             @id @default(cuid())
+  organizationId  String             @map("organization_id")
+  branchId        String?            @map("branch_id")
+  patientId       String             @map("patient_id")
+  doctorId        String             @map("doctor_id")
+  scheduledDate   DateTime           @map("scheduled_date") // fecha (día)
+  startTime       DateTime           @map("start_time")
+  durationMinutes Int                @default(30) @map("duration_minutes")
+  type            AppointmentType
+  reason          String?
+  channel         AppointmentChannel @default(PHONE) // origen de la cita
+  status          AppointmentStatus  @default(TO_CONFIRM)
+  notes           String?
+  isOverbooked    Boolean            @default(false) @map("is_overbooked")
+  createdById     String             @map("created_by_id")
+  isActive        Boolean            @default(true) @map("is_active")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
 
   // --- Folio y trazabilidad de confirmación/cancelación ---
-  folio              String?   // DOC-2841: lo que el paciente cita por WhatsApp
+  folio              String? // DOC-2841: lo que el paciente cita por WhatsApp
   whatsappPhone      String?   @map("whatsapp_phone") // teléfono que originó/gestiona la cita
   confirmedAt        DateTime? @map("confirmed_at")
   confirmedBy        String?   @map("confirmed_by") // PATIENT | CLINIC
@@ -1268,15 +1278,15 @@ model Appointment {
   lastSyncedAt     DateTime?  @map("last_synced_at")
   version          Int        @default(1) // sube en cada cambio: detecta conflictos
 
-  organization   Organization              @relation(fields: [organizationId], references: [id])
-  branch         Branch?                   @relation(fields: [branchId], references: [id])
-  patient        Patient                   @relation(fields: [patientId], references: [id])
-  doctor         User                      @relation("AppointmentDoctor", fields: [doctorId], references: [id])
-  createdByUser  User                      @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
-  statusHistory  AppointmentStatusHistory[]
-  visit          Visit?
+  organization     Organization               @relation(fields: [organizationId], references: [id])
+  branch           Branch?                    @relation(fields: [branchId], references: [id])
+  patient          Patient                    @relation(fields: [patientId], references: [id])
+  doctor           User                       @relation("AppointmentDoctor", fields: [doctorId], references: [id])
+  createdByUser    User                       @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  statusHistory    AppointmentStatusHistory[]
+  visit            Visit?
   publicFormTokens PublicFormToken[]
-  reminders      ReminderJob[]
+  reminders        ReminderJob[]
 
   @@unique([organizationId, folio])
   @@index([organizationId, scheduledDate])
@@ -1321,24 +1331,24 @@ enum ReminderStatus {
 /// mandó, cuándo, y por qué falló. Sin esa bitácora, un paciente que no
 /// recibió su recordatorio es imposible de explicar.
 model ReminderJob {
-  id             String         @id @default(cuid())
-  organizationId String         @map("organization_id")
-  appointmentId  String         @map("appointment_id")
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  appointmentId  String @map("appointment_id")
 
   /// Cuántas horas antes de la cita se manda. Parte de la llave única.
-  hoursBefore    Int            @map("hours_before")
+  hoursBefore Int      @map("hours_before")
   /// Momento exacto en que debe salir.
-  sendAt         DateTime       @map("send_at")
+  sendAt      DateTime @map("send_at")
 
-  status         ReminderStatus @default(PENDING)
-  sentAt         DateTime?      @map("sent_at")
+  status     ReminderStatus @default(PENDING)
+  sentAt     DateTime?      @map("sent_at")
   /// Id del mensaje en WhatsApp: con él llegan los acuses de entrega.
-  externalId     String?        @map("external_id")
-  error          String?
-  attempts       Int            @default(0)
+  externalId String?        @map("external_id")
+  error      String?
+  attempts   Int            @default(0)
 
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   appointment  Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
@@ -1355,34 +1365,34 @@ model ReminderJob {
 /// guarda cifrado (AES-256-GCM con clave derivada de AUTH_SECRET). Solo el
 /// médico dueño o un admin pueden desconectarlo.
 model GoogleCalendarConnection {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  doctorId       String   @unique @map("doctor_id")
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  doctorId       String @unique @map("doctor_id")
 
-  googleEmail    String   @map("google_email") // qué cuenta conectó: se muestra en pantalla
-  calendarId     String   @default("primary") @map("calendar_id")
+  googleEmail String @map("google_email") // qué cuenta conectó: se muestra en pantalla
+  calendarId  String @default("primary") @map("calendar_id")
 
   /// Cifrado. Nunca se expone ni se escribe en logs.
-  refreshToken   String   @map("refresh_token")
-  accessToken    String?  @map("access_token")
+  refreshToken    String    @map("refresh_token")
+  accessToken     String?   @map("access_token")
   accessExpiresAt DateTime? @map("access_expires_at")
 
   /// Token incremental de Google para traer solo lo que cambió.
-  syncToken      String?  @map("sync_token")
+  syncToken        String?   @map("sync_token")
   /// Suscripción push de Google; caduca y hay que renovarla.
-  channelId      String?  @map("channel_id")
-  resourceId     String?  @map("resource_id")
+  channelId        String?   @map("channel_id")
+  resourceId       String?   @map("resource_id")
   channelExpiresAt DateTime? @map("channel_expires_at")
 
   /// Trae los eventos personales de Google como bloqueos de disponibilidad.
-  pullBusy       Boolean  @default(true) @map("pull_busy")
+  pullBusy   Boolean @default(true) @map("pull_busy")
   /// Publica las citas de Doctovio en Google.
-  pushEvents     Boolean  @default(true) @map("push_events")
+  pushEvents Boolean @default(true) @map("push_events")
 
-  lastSyncedAt   DateTime? @map("last_synced_at")
-  lastError      String?   @map("last_error")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  lastError    String?   @map("last_error")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   doctor       User         @relation(fields: [doctorId], references: [id])
@@ -1488,8 +1498,8 @@ model ConversationMessage {
 
   session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  @@index([sessionId, createdAt])
   @@unique([externalId])
+  @@index([sessionId, createdAt])
   @@map("conversation_messages")
 }
 
@@ -1540,17 +1550,17 @@ model ScheduleBlock {
 /// Reserva temporal mientras el paciente confirma. Evita que dos personas
 /// tomen el mismo horario a la vez. Expira sola a los pocos minutos.
 model AppointmentHold {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  doctorId       String   @map("doctor_id")
-  patientId      String?  @map("patient_id")
-  startAt        DateTime @map("start_at")
-  endAt          DateTime @map("end_at")
-  expiresAt      DateTime @map("expires_at")
-  sessionKey     String?  @map("session_key") // conversación que la tomó
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  doctorId       String    @map("doctor_id")
+  patientId      String?   @map("patient_id")
+  startAt        DateTime  @map("start_at")
+  endAt          DateTime  @map("end_at")
+  expiresAt      DateTime  @map("expires_at")
+  sessionKey     String?   @map("session_key") // conversación que la tomó
   consumedAt     DateTime? @map("consumed_at") // se volvió cita
   releasedAt     DateTime? @map("released_at") // se soltó a propósito
-  createdAt      DateTime @default(now()) @map("created_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   doctor       User         @relation(fields: [doctorId], references: [id])
@@ -1561,13 +1571,13 @@ model AppointmentHold {
 }
 
 model AppointmentStatusHistory {
-  id            String            @id @default(cuid())
-  appointmentId String            @map("appointment_id")
+  id            String             @id @default(cuid())
+  appointmentId String             @map("appointment_id")
   fromStatus    AppointmentStatus? @map("from_status")
-  toStatus      AppointmentStatus @map("to_status")
-  changedById   String            @map("changed_by_id")
+  toStatus      AppointmentStatus  @map("to_status")
+  changedById   String             @map("changed_by_id")
   reason        String?
-  createdAt     DateTime          @default(now()) @map("created_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
@@ -1580,29 +1590,29 @@ model AppointmentStatusHistory {
 // ============================================================================
 
 model Visit {
-  id             String            @id @default(cuid())
-  organizationId String            @map("organization_id")
-  branchId       String?           @map("branch_id")
-  patientId      String            @map("patient_id")
-  appointmentId  String?           @unique @map("appointment_id")
-  doctorId       String            @map("doctor_id")
-  arrivalType    VisitArrivalType  @map("arrival_type")
-  arrivalTime    DateTime          @default(now()) @map("arrival_time")
+  id             String           @id @default(cuid())
+  organizationId String           @map("organization_id")
+  branchId       String?          @map("branch_id")
+  patientId      String           @map("patient_id")
+  appointmentId  String?          @unique @map("appointment_id")
+  doctorId       String           @map("doctor_id")
+  arrivalType    VisitArrivalType @map("arrival_type")
+  arrivalTime    DateTime         @default(now()) @map("arrival_time")
   reason         String?
-  priority       VisitPriority     @default(NORMAL)
-  status         VisitStatus       @default(REGISTERED)
-  startedAt      DateTime?         @map("started_at")
-  completedAt    DateTime?         @map("completed_at")
-  createdById    String            @map("created_by_id")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
+  priority       VisitPriority    @default(NORMAL)
+  status         VisitStatus      @default(REGISTERED)
+  startedAt      DateTime?        @map("started_at")
+  completedAt    DateTime?        @map("completed_at")
+  createdById    String           @map("created_by_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
 
-  organization  Organization  @relation(fields: [organizationId], references: [id])
-  branch        Branch?       @relation(fields: [branchId], references: [id])
-  patient       Patient       @relation(fields: [patientId], references: [id])
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
-  doctor        User          @relation("VisitDoctor", fields: [doctorId], references: [id])
-  consultation  Consultation?
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
+  doctor       User          @relation("VisitDoctor", fields: [doctorId], references: [id])
+  consultation Consultation?
 
   @@index([organizationId, status])
   @@index([organizationId, arrivalTime])
@@ -1615,50 +1625,51 @@ model Visit {
 // ============================================================================
 
 model Consultation {
-  id             String             @id @default(cuid())
-  organizationId String             @map("organization_id")
-  patientId      String             @map("patient_id")
-  doctorId       String             @map("doctor_id")
-  visitId        String             @unique @map("visit_id")
-  appointmentId  String?            @map("appointment_id")
-  date           DateTime           @default(now())
-  startTime      DateTime?          @map("start_time")
-  endTime        DateTime?          @map("end_time")
-  type           ConsultationType   @default(GENERAL)
-  reason         String?
-  currentIllness String?            @map("current_illness") // padecimiento actual
-  physicalExam   String?            @map("physical_exam")
-  assessment     String?
-  diagnosisSummary String?          @map("diagnosis_summary")
-  plan           String?
-  treatment      String?
-  instructions   String?
-  prognosis      String?
-  followUp       String?            @map("follow_up")
-  followUpDate   DateTime?          @map("follow_up_date")
-  observations   String?
-  status         ConsultationStatus @default(DRAFT)
-  finalizedAt    DateTime?          @map("finalized_at")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
+  id               String             @id @default(cuid())
+  organizationId   String             @map("organization_id")
+  patientId        String             @map("patient_id")
+  doctorId         String             @map("doctor_id")
+  visitId          String             @unique @map("visit_id")
+  appointmentId    String?            @map("appointment_id")
+  date             DateTime           @default(now())
+  startTime        DateTime?          @map("start_time")
+  endTime          DateTime?          @map("end_time")
+  type             ConsultationType   @default(GENERAL)
+  reason           String?
+  currentIllness   String?            @map("current_illness") // padecimiento actual
+  physicalExam     String?            @map("physical_exam")
+  assessment       String?
+  diagnosisSummary String?            @map("diagnosis_summary")
+  plan             String?
+  treatment        String?
+  instructions     String?
+  prognosis        String?
+  followUp         String?            @map("follow_up")
+  followUpDate     DateTime?          @map("follow_up_date")
+  observations     String?
+  status           ConsultationStatus @default(DRAFT)
+  finalizedAt      DateTime?          @map("finalized_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
 
-  organization Organization       @relation(fields: [organizationId], references: [id])
-  patient      Patient            @relation(fields: [patientId], references: [id])
-  doctor       User               @relation("ConsultationDoctor", fields: [doctorId], references: [id])
-  visit        Visit              @relation(fields: [visitId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  doctor       User         @relation("ConsultationDoctor", fields: [doctorId], references: [id])
+  visit        Visit        @relation(fields: [visitId], references: [id])
 
-  notes         ConsultationNote[]
-  vitalSigns    VitalSign[]
-  diagnoses     Diagnosis[]
-  prescriptions Prescription[]
-  medicalOrders MedicalOrder[]
-  documents     PatientDocument[]
-  payment       Payment?
+  notes              ConsultationNote[]
+  vitalSigns         VitalSign[]
+  diagnoses          Diagnosis[]
+  prescriptions      Prescription[]
+  medicalOrders      MedicalOrder[]
+  documents          PatientDocument[]
+  payment            Payment?
+  odontogramEntries  OdontogramEntry[]
+  treatmentPlanItems TreatmentPlanItem[]
 
   @@index([organizationId, patientId])
   @@index([organizationId, doctorId, date])
   @@map("consultations")
-  odontogramEntries OdontogramEntry[]
 }
 
 model ConsultationNote {
@@ -1708,7 +1719,7 @@ model Diagnosis {
   doctorId       String        @map("doctor_id")
   label          String
   type           DiagnosisType @default(PRESUMPTIVE)
-  code           String?       // CIE-10 opcional
+  code           String? // CIE-10 opcional
   description    String?
   status         String        @default("active")
   date           DateTime      @default(now())
@@ -1727,31 +1738,31 @@ model Diagnosis {
 // ============================================================================
 
 model Prescription {
-  id             String              @id @default(cuid())
-  organizationId String              @map("organization_id")
-  patientId      String              @map("patient_id")
-  doctorId       String              @map("doctor_id")
-  consultationId String?             @map("consultation_id")
-  folio          String              @map("folio")
-  date           DateTime            @default(now())
-  diagnosisText  String?             @map("diagnosis_text")
-  instructions   String?
-  recommendations String?
-  status         PrescriptionStatus  @default(DRAFT)
-  supersedesId   String?             @unique @map("supersedes_id")
-  pdfAssetId     String?             @map("pdf_asset_id")
-  qrValidationCode String?           @map("qr_validation_code")
-  issuedAt       DateTime?           @map("issued_at")
-  cancelledAt    DateTime?           @map("cancelled_at")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id               String             @id @default(cuid())
+  organizationId   String             @map("organization_id")
+  patientId        String             @map("patient_id")
+  doctorId         String             @map("doctor_id")
+  consultationId   String?            @map("consultation_id")
+  folio            String             @map("folio")
+  date             DateTime           @default(now())
+  diagnosisText    String?            @map("diagnosis_text")
+  instructions     String?
+  recommendations  String?
+  status           PrescriptionStatus @default(DRAFT)
+  supersedesId     String?            @unique @map("supersedes_id")
+  pdfAssetId       String?            @map("pdf_asset_id")
+  qrValidationCode String?            @map("qr_validation_code")
+  issuedAt         DateTime?          @map("issued_at")
+  cancelledAt      DateTime?          @map("cancelled_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
 
-  organization Organization        @relation(fields: [organizationId], references: [id])
-  patient      Patient             @relation(fields: [patientId], references: [id])
-  doctor       User                @relation("PrescriptionDoctor", fields: [doctorId], references: [id])
-  consultation Consultation?       @relation(fields: [consultationId], references: [id])
-  supersedes   Prescription?       @relation("PrescriptionVersion", fields: [supersedesId], references: [id])
-  supersededBy Prescription?       @relation("PrescriptionVersion")
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  patient      Patient            @relation(fields: [patientId], references: [id])
+  doctor       User               @relation("PrescriptionDoctor", fields: [doctorId], references: [id])
+  consultation Consultation?      @relation(fields: [consultationId], references: [id])
+  supersedes   Prescription?      @relation("PrescriptionVersion", fields: [supersedesId], references: [id])
+  supersededBy Prescription?      @relation("PrescriptionVersion")
   items        PrescriptionItem[]
 
   @@unique([organizationId, folio])
@@ -1761,18 +1772,18 @@ model Prescription {
 }
 
 model PrescriptionItem {
-  id                 String   @id @default(cuid())
-  prescriptionId     String   @map("prescription_id")
-  medicationName     String   @map("medication_name")
-  activeIngredient   String?  @map("active_ingredient") // principio activo
-  presentation       String?  // presentación / forma farmacéutica
-  quantityToDispense String?  @map("quantity_to_dispense") // cantidad a surtir
+  id                 String  @id @default(cuid())
+  prescriptionId     String  @map("prescription_id")
+  medicationName     String  @map("medication_name")
+  activeIngredient   String? @map("active_ingredient") // principio activo
+  presentation       String? // presentación / forma farmacéutica
+  quantityToDispense String? @map("quantity_to_dispense") // cantidad a surtir
   dose               String?
   frequency          String?
   route              String?
   duration           String?
   instructions       String?
-  sortOrder          Int      @default(0) @map("sort_order")
+  sortOrder          Int     @default(0) @map("sort_order")
 
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
 
@@ -1785,30 +1796,30 @@ model PrescriptionItem {
 // ============================================================================
 
 model MedicalOrder {
-  id             String                @id @default(cuid())
-  organizationId String                @map("organization_id")
-  patientId      String                @map("patient_id")
-  doctorId       String                @map("doctor_id")
-  consultationId String?               @map("consultation_id")
+  id             String               @id @default(cuid())
+  organizationId String               @map("organization_id")
+  patientId      String               @map("patient_id")
+  doctorId       String               @map("doctor_id")
+  consultationId String?              @map("consultation_id")
   folio          String
-  date           DateTime              @default(now())
+  date           DateTime             @default(now())
   type           MedicalOrderType
   reason         String?
-  diagnosisText  String?               @map("diagnosis_text")
+  diagnosisText  String?              @map("diagnosis_text")
   instructions   String?
-  priority       MedicalOrderPriority  @default(ROUTINE)
-  status         MedicalOrderStatus    @default(DRAFT)
-  pdfAssetId     String?               @map("pdf_asset_id")
-  issuedAt       DateTime?             @map("issued_at")
-  completedAt    DateTime?             @map("completed_at")
-  cancelledAt    DateTime?             @map("cancelled_at")
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
+  priority       MedicalOrderPriority @default(ROUTINE)
+  status         MedicalOrderStatus   @default(DRAFT)
+  pdfAssetId     String?              @map("pdf_asset_id")
+  issuedAt       DateTime?            @map("issued_at")
+  completedAt    DateTime?            @map("completed_at")
+  cancelledAt    DateTime?            @map("cancelled_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
 
-  organization Organization         @relation(fields: [organizationId], references: [id])
-  patient      Patient              @relation(fields: [patientId], references: [id])
-  doctor       User                 @relation("MedicalOrderDoctor", fields: [doctorId], references: [id])
-  consultation Consultation?        @relation(fields: [consultationId], references: [id])
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  patient      Patient            @relation(fields: [patientId], references: [id])
+  doctor       User               @relation("MedicalOrderDoctor", fields: [doctorId], references: [id])
+  consultation Consultation?      @relation(fields: [consultationId], references: [id])
   items        MedicalOrderItem[]
 
   @@unique([organizationId, folio])
@@ -1818,11 +1829,11 @@ model MedicalOrder {
 }
 
 model MedicalOrderItem {
-  id             String   @id @default(cuid())
-  medicalOrderId String   @map("medical_order_id")
-  studyName      String   @map("study_name")
+  id             String  @id @default(cuid())
+  medicalOrderId String  @map("medical_order_id")
+  studyName      String  @map("study_name")
   notes          String?
-  sortOrder      Int      @default(0) @map("sort_order")
+  sortOrder      Int     @default(0) @map("sort_order")
 
   medicalOrder MedicalOrder @relation(fields: [medicalOrderId], references: [id])
 
@@ -1844,7 +1855,7 @@ model FileAsset {
   checksum       String?
   createdAt      DateTime @default(now()) @map("created_at")
 
-  organization Organization      @relation(fields: [organizationId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id])
   document     PatientDocument?
 
   @@index([organizationId])
@@ -1852,19 +1863,23 @@ model FileAsset {
 }
 
 model PatientDocument {
-  id             String            @id @default(cuid())
-  organizationId String            @map("organization_id")
-  patientId      String            @map("patient_id")
-  consultationId String?           @map("consultation_id")
-  fileAssetId    String            @unique @map("file_asset_id")
+  id             String           @id @default(cuid())
+  organizationId String           @map("organization_id")
+  patientId      String           @map("patient_id")
+  consultationId String?          @map("consultation_id")
+  fileAssetId    String           @unique @map("file_asset_id")
   name           String
   category       DocumentCategory
-  documentDate   DateTime?         @map("document_date")
+  documentDate   DateTime?        @map("document_date")
   description    String?
-  privacyLevel   PrivacyLevel      @default(GENERAL) @map("privacy_level")
-  status         DocumentStatus    @default(ACTIVE)
-  uploadedById   String            @map("uploaded_by_id")
-  uploadedAt     DateTime          @default(now()) @map("uploaded_at")
+  privacyLevel   PrivacyLevel     @default(GENERAL) @map("privacy_level")
+  /// Pieza dental (FDI) a la que pertenece el documento, cuando aplica: la
+  /// radiografía del 16, la foto del implante. Nula en todo lo demás, que es
+  /// el caso de cualquier consultorio no dental.
+  toothCode      String?          @map("tooth_code")
+  status         DocumentStatus   @default(ACTIVE)
+  uploadedById   String           @map("uploaded_by_id")
+  uploadedAt     DateTime         @default(now()) @map("uploaded_at")
 
   organization Organization  @relation(fields: [organizationId], references: [id])
   patient      Patient       @relation(fields: [patientId], references: [id])
@@ -1882,30 +1897,30 @@ model PatientDocument {
 // ============================================================================
 
 model MedicalReferral {
-  id                   String          @id @default(cuid())
-  organizationFromId   String          @map("organization_from_id")
-  organizationToId     String          @map("organization_to_id")
-  patientId            String          @map("patient_id")
-  fromDoctorId         String          @map("from_doctor_id")
-  toDoctorId           String          @map("to_doctor_id")
-  reason               String
-  priority             ReferralPriority @default(NORMAL)
-  status               ReferralStatus  @default(DRAFT)
-  patientAuthorized    Boolean         @default(false) @map("patient_authorized")
-  patientAuthorizedAt  DateTime?       @map("patient_authorized_at")
-  accessExpiresAt      DateTime?       @map("access_expires_at")
-  referentComments     String?         @map("referent_comments")
-  sentAt               DateTime?       @map("sent_at")
-  respondedAt          DateTime?       @map("responded_at")
-  closedAt             DateTime?       @map("closed_at")
-  createdAt            DateTime        @default(now()) @map("created_at")
-  updatedAt            DateTime        @updatedAt @map("updated_at")
+  id                  String           @id @default(cuid())
+  organizationFromId  String           @map("organization_from_id")
+  organizationToId    String           @map("organization_to_id")
+  patientId           String           @map("patient_id")
+  fromDoctorId        String           @map("from_doctor_id")
+  toDoctorId          String           @map("to_doctor_id")
+  reason              String
+  priority            ReferralPriority @default(NORMAL)
+  status              ReferralStatus   @default(DRAFT)
+  patientAuthorized   Boolean          @default(false) @map("patient_authorized")
+  patientAuthorizedAt DateTime?        @map("patient_authorized_at")
+  accessExpiresAt     DateTime?        @map("access_expires_at")
+  referentComments    String?          @map("referent_comments")
+  sentAt              DateTime?        @map("sent_at")
+  respondedAt         DateTime?        @map("responded_at")
+  closedAt            DateTime?        @map("closed_at")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
 
-  organizationFrom Organization           @relation("ReferralOrgFrom", fields: [organizationFromId], references: [id])
-  organizationTo   Organization           @relation("ReferralOrgTo", fields: [organizationToId], references: [id])
-  patient          Patient                @relation(fields: [patientId], references: [id])
-  fromDoctor       User                   @relation("ReferralFromDoctor", fields: [fromDoctorId], references: [id])
-  toDoctor         User                   @relation("ReferralToDoctor", fields: [toDoctorId], references: [id])
+  organizationFrom Organization         @relation("ReferralOrgFrom", fields: [organizationFromId], references: [id])
+  organizationTo   Organization         @relation("ReferralOrgTo", fields: [organizationToId], references: [id])
+  patient          Patient              @relation(fields: [patientId], references: [id])
+  fromDoctor       User                 @relation("ReferralFromDoctor", fields: [fromDoctorId], references: [id])
+  toDoctor         User                 @relation("ReferralToDoctor", fields: [toDoctorId], references: [id])
   sharedItems      ReferralSharedItem[]
   response         ReferralResponse?
   accessLogs       ReferralAccessLog[]
@@ -1918,12 +1933,12 @@ model MedicalReferral {
 
 // Snapshot explícito y seleccionable de qué información clínica se comparte.
 model ReferralSharedItem {
-  id          String   @id @default(cuid())
-  referralId  String   @map("referral_id")
-  fieldKey    String   @map("field_key") // e.g. "blood_type", "allergies", "chronic_conditions", "current_medications", "diagnosis", "treatment"
-  fieldLabel  String   @map("field_label")
-  valueText   String   @map("value_text")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid())
+  referralId String   @map("referral_id")
+  fieldKey   String   @map("field_key") // e.g. "blood_type", "allergies", "chronic_conditions", "current_medications", "diagnosis", "treatment"
+  fieldLabel String   @map("field_label")
+  valueText  String   @map("value_text")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   referral MedicalReferral @relation(fields: [referralId], references: [id])
 
@@ -1932,18 +1947,18 @@ model ReferralSharedItem {
 }
 
 model ReferralResponse {
-  id                  String    @id @default(cuid())
-  referralId          String    @unique @map("referral_id")
-  attendedConfirmed   Boolean   @default(false) @map("attended_confirmed")
-  attendedAt          DateTime? @map("attended_at")
-  generalAssessment   String?   @map("general_assessment")
-  generalDiagnosis    String?   @map("general_diagnosis")
-  recommendations     String?
-  followUp            String?   @map("follow_up")
-  requestsReturn      Boolean   @default(false) @map("requests_return")
-  comments            String?
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  referralId        String    @unique @map("referral_id")
+  attendedConfirmed Boolean   @default(false) @map("attended_confirmed")
+  attendedAt        DateTime? @map("attended_at")
+  generalAssessment String?   @map("general_assessment")
+  generalDiagnosis  String?   @map("general_diagnosis")
+  recommendations   String?
+  followUp          String?   @map("follow_up")
+  requestsReturn    Boolean   @default(false) @map("requests_return")
+  comments          String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   referral MedicalReferral @relation(fields: [referralId], references: [id])
 
@@ -1954,7 +1969,7 @@ model ReferralAccessLog {
   id         String   @id @default(cuid())
   referralId String   @map("referral_id")
   userId     String   @map("user_id")
-  action     String   // viewed_summary, accepted, rejected, closed, etc.
+  action     String // viewed_summary, accepted, rejected, closed, etc.
   ipAddress  String?  @map("ip_address")
   userAgent  String?  @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -1970,17 +1985,17 @@ model ReferralAccessLog {
 // ============================================================================
 
 model NotificationTemplate {
-  id             String            @id @default(cuid())
-  organizationId String            @map("organization_id")
-  type           NotificationType
-  channel        NotificationChannel @default(EMAIL)
-  subject        String?
-  bodyHtml       String?           @map("body_html")
-  bodyText       String?           @map("body_text")
-  whatsappTemplateName String?     @map("whatsapp_template_name")
-  isActive       Boolean           @default(true) @map("is_active")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
+  id                   String              @id @default(cuid())
+  organizationId       String              @map("organization_id")
+  type                 NotificationType
+  channel              NotificationChannel @default(EMAIL)
+  subject              String?
+  bodyHtml             String?             @map("body_html")
+  bodyText             String?             @map("body_text")
+  whatsappTemplateName String?             @map("whatsapp_template_name")
+  isActive             Boolean             @default(true) @map("is_active")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -2015,26 +2030,26 @@ model NotificationLog {
 // ============================================================================
 
 model PublicFormToken {
-  id             String                 @id @default(cuid())
-  organizationId String                 @map("organization_id")
-  patientId      String?                @map("patient_id")
-  appointmentId  String?                @map("appointment_id")
+  id             String                @id @default(cuid())
+  organizationId String                @map("organization_id")
+  patientId      String?               @map("patient_id")
+  appointmentId  String?               @map("appointment_id")
   type           PublicFormTokenType
-  token          String                 @unique
-  status         PublicFormTokenStatus  @default(GENERATED)
-  expiresAt      DateTime               @map("expires_at")
-  openedAt       DateTime?              @map("opened_at")
-  submittedAt    DateTime?              @map("submitted_at")
-  revokedAt      DateTime?              @map("revoked_at")
-  ipAddress      String?                @map("ip_address")
-  userAgent      String?                @map("user_agent")
-  payloadJson    Json?                  @map("payload_json") // datos capturados por el paciente
-  createdAt      DateTime               @default(now()) @map("created_at")
-  updatedAt      DateTime               @updatedAt @map("updated_at")
+  token          String                @unique
+  status         PublicFormTokenStatus @default(GENERATED)
+  expiresAt      DateTime              @map("expires_at")
+  openedAt       DateTime?             @map("opened_at")
+  submittedAt    DateTime?             @map("submitted_at")
+  revokedAt      DateTime?             @map("revoked_at")
+  ipAddress      String?               @map("ip_address")
+  userAgent      String?               @map("user_agent")
+  payloadJson    Json?                 @map("payload_json") // datos capturados por el paciente
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
 
-  organization Organization  @relation(fields: [organizationId], references: [id])
-  patient      Patient?      @relation(fields: [patientId], references: [id])
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient?     @relation(fields: [patientId], references: [id])
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([organizationId, status])
   @@index([token])
@@ -2094,40 +2109,45 @@ enum OdontogramEntryStatus {
 /// se desincronicen. Además perdería lo más útil: qué se le ha hecho a esa pieza
 /// y en qué orden.
 model OdontogramEntry {
-  id             String                @id @default(cuid())
-  organizationId String                @map("organization_id")
-  patientId      String                @map("patient_id")
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  patientId      String @map("patient_id")
 
   /// Notación FDI (ISO 3950), la que se usa en México: cuadrante + pieza.
   /// 11-18, 21-28, 31-38, 41-48 permanentes · 51-55, 61-65, 71-75, 81-85
   /// temporales. Se guarda como texto de dos dígitos, no como número: "07" y
   /// 7 no son lo mismo y el cero a la izquierda importa al ordenar.
-  toothCode      String                @map("tooth_code")
+  toothCode String @map("tooth_code")
 
   /// Superficies afectadas. Varias a la vez es lo normal: una caries que abarca
   /// oclusal y mesial se registra como una sola anotación con las dos.
-  surfaces       ToothSurface[]
+  surfaces ToothSurface[]
 
-  kind           OdontogramEntryKind
+  kind   OdontogramEntryKind
   /// Código del catálogo (CARIES, RESINA, CORONA…). Ver lib/constants/odontograma.ts
-  code           String
-  status         OdontogramEntryStatus @default(COMPLETED)
+  code   String
+  status OdontogramEntryStatus @default(COMPLETED)
 
   notes          String?
   /// Consulta en la que se registró, cuando viene de una.
-  consultationId String?               @map("consultation_id")
+  consultationId String? @map("consultation_id")
   /// Quién lo anotó. Es historia clínica: siempre hay un responsable.
-  doctorId       String                @map("doctor_id")
+  doctorId       String  @map("doctor_id")
 
   /// Cuándo ocurrió, que no siempre es cuándo se capturó.
-  recordedAt     DateTime              @default(now()) @map("recorded_at")
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   organization Organization  @relation(fields: [organizationId], references: [id])
   patient      Patient       @relation(fields: [patientId], references: [id])
   consultation Consultation? @relation(fields: [consultationId], references: [id])
   doctor       User          @relation(fields: [doctorId], references: [id])
+
+  /// Los renglones del plan que nacieron de este hallazgo.
+  planItemsFromFinding TreatmentPlanItem[] @relation("PlanFinding")
+  /// El renglón del plan que produjo esta anotación al marcarse realizado.
+  planItemResult       TreatmentPlanItem?  @relation("PlanResult")
 
   /// La consulta más común: todo el odontograma de un paciente.
   @@index([organizationId, patientId])
@@ -2148,7 +2168,7 @@ model AuditLog {
   organizationId String?     @map("organization_id")
   userId         String?     @map("user_id")
   action         AuditAction
-  entity         String      // e.g. "patient", "prescription"
+  entity         String // e.g. "patient", "prescription"
   entityId       String?     @map("entity_id")
   ipAddress      String?     @map("ip_address")
   userAgent      String?     @map("user_agent")
@@ -2163,4 +2183,275 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// MÓDULO DENTAL — catálogo del consultorio, plan de tratamiento y cotizaciones
+// ============================================================================
+//
+// Todo lo de aquí abajo es ADITIVO y vive detrás de `Organization.type =
+// DENTAL`. Si mañana se apaga el módulo, ninguna tabla existente cambia de
+// forma y Doctovio sigue operando igual: nada del core lee estas tablas.
+//
+// LAS TRES CAPAS, QUE NO SE PISAN:
+//
+//   Hallazgo              → OdontogramEntry kind=FINDING    (lo que se encontró)
+//   Tratamiento planeado  → TreatmentPlanItem               (lo que se propone)
+//   Tratamiento realizado → OdontogramEntry kind=TREATMENT  (lo que se hizo)
+//
+// Cada concepto tiene UN dueño. Planear no escribe en la bitácora del
+// odontograma, y marcar "realizado" crea la anotación y la deja ligada al plan.
+// Así el diagrama se sigue derivando de la bitácora y el plan no se convierte
+// en una segunda verdad del expediente.
+
+/// Un renglón del catálogo del consultorio: se cobra por él o se entrega.
+enum CatalogItemType {
+  /// Se hace: limpieza, resina, endodoncia.
+  SERVICE
+  /// Se entrega: cepillo, guarda, kit de higiene.
+  PRODUCT
+}
+
+/// Estado de un tratamiento del plan.
+///
+/// OJO: es a la vez clínico y comercial, y la frontera importa. ACCEPTED
+/// significa que el paciente dijo que sí — NO que ya se le hizo. Solo un
+/// usuario con permiso clínico pasa un renglón a COMPLETED.
+enum TreatmentStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Estado comercial de una cotización.
+///
+/// NO existe "vencida" aquí: se DERIVA de `validUntil`, igual que "vencido" en
+/// la cobranza de la plataforma (ver `cycleState()`). Guardarla obligaría a un
+/// proceso nocturno que recorriera la tabla, y el día que fallara el sistema
+/// mostraría vigente algo que ya no lo está.
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  /// El paciente aceptó una parte.
+  PARTIAL
+  CANCELLED
+}
+
+/// Categoría del catálogo, propia de cada consultorio.
+///
+/// Es tabla y no texto libre porque la pantalla filtra por ella: con texto
+/// suelto, "Endodoncia" y "endodoncia" serían dos categorías y el filtro
+/// dejaría fuera la mitad del catálogo. Se siembran las sugeridas la primera
+/// vez que el consultorio abre la pantalla, y puede agregar las suyas.
+model CatalogCategory {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  name           String
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  items        CatalogItem[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("catalog_categories")
+}
+
+/// PRODUCTOS Y SERVICIOS DEL CONSULTORIO.
+///
+/// NO confundir con `Product`, que es el catálogo de Doctovio: lo que el
+/// consultorio le paga a la plataforma. Son dos negocios distintos y por eso
+/// son dos tablas. Meterle `organizationId` a `Product` habría dejado las
+/// suscripciones y las mensualidades de la plataforma mezcladas con las
+/// resinas de un dentista, y el panel Master leyéndolas juntas.
+///
+/// Cada consultorio administra el suyo. No hay catálogo global compartido.
+model CatalogItem {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  /// Código interno del consultorio: RES001. Opcional, único cuando lo usa.
+  code           String?
+  name           String
+  description    String?
+  type           CatalogItemType @default(SERVICE)
+  categoryId     String?         @map("category_id")
+
+  /// Precio de lista. Cambiarlo NO toca ningún tratamiento ni cotización ya
+  /// emitidos: esos guardan su propia copia.
+  price    Float
+  currency String @default("MXN")
+  /// Tasa de impuesto en porcentaje (16 = IVA). Nula = no aplica.
+  taxRate  Float? @map("tax_rate")
+
+  /// Nunca se BORRA un renglón usado en un tratamiento o una cotización: se
+  /// desactiva. Borrarlo dejaría documentos históricos apuntando al vacío.
+  isActive Boolean @default(true) @map("is_active")
+
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  category     CatalogCategory?    @relation(fields: [categoryId], references: [id])
+  treatments   TreatmentPlanItem[]
+  quoteItems   QuoteItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@index([organizationId, type])
+  @@map("catalog_items")
+}
+
+/// UN RENGLÓN DEL PLAN DE TRATAMIENTO: lo que se le propone al paciente.
+///
+/// Es la capa intermedia entre el hallazgo y el tratamiento hecho. Lleva la
+/// pieza y el diagnóstico (clínico) junto al producto y el precio (comercial),
+/// porque en la práctica el dentista los captura en el mismo momento: "el 16
+/// tiene caries oclusal, se le hace una resina, cuesta 850".
+model TreatmentPlanItem {
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  patientId      String @map("patient_id")
+
+  /// Pieza en notación FDI. Nula para lo que no es de una pieza concreta:
+  /// limpieza, blanqueamiento, ortodoncia.
+  toothCode String?        @map("tooth_code")
+  surfaces  ToothSurface[]
+
+  /// Diagnóstico en palabras del dentista: "Caries oclusal".
+  diagnosis     String?
+  /// Código del catálogo del odontograma (RESINA, EXTRACCION…). Es lo que
+  /// pinta el diagrama; el producto es lo que se cobra.
+  treatmentCode String  @map("treatment_code")
+
+  // --- Comercial. Todo copiado, nada vivo. ---
+  catalogItemId String? @map("catalog_item_id")
+  /// Nombre del producto TAL COMO ESTABA al planearlo.
+  itemName      String  @map("item_name")
+  /// Precio de lista en ese momento, para poder mostrar el descuento real
+  /// concedido aunque el catálogo cambie después.
+  listPrice     Float?  @map("list_price")
+  /// Precio efectivamente aplicado a este paciente.
+  unitPrice     Float   @map("unit_price")
+  quantity      Int     @default(1)
+  /// Descuento en importe, no en porcentaje: es lo que se negocia de viva voz.
+  discount      Float   @default(0)
+
+  status TreatmentStatus @default(PENDING)
+  notes  String?
+
+  /// El hallazgo que lo motivó, cuando se creó desde el odontograma.
+  findingEntryId String? @map("finding_entry_id")
+  /// La anotación del odontograma que se creó al marcarlo realizado. Es el
+  /// puente entre el plan y la bitácora clínica.
+  resultEntryId  String? @unique @map("result_entry_id")
+  consultationId String? @map("consultation_id")
+
+  createdById   String    @map("created_by_id")
+  completedById String?   @map("completed_by_id")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  patient      Patient          @relation(fields: [patientId], references: [id])
+  catalogItem  CatalogItem?     @relation(fields: [catalogItemId], references: [id])
+  findingEntry OdontogramEntry? @relation("PlanFinding", fields: [findingEntryId], references: [id])
+  resultEntry  OdontogramEntry? @relation("PlanResult", fields: [resultEntryId], references: [id])
+  consultation Consultation?    @relation(fields: [consultationId], references: [id])
+  createdBy    User             @relation("TreatmentCreatedBy", fields: [createdById], references: [id])
+  completedBy  User?            @relation("TreatmentCompletedBy", fields: [completedById], references: [id])
+  quoteItems   QuoteItem[]
+
+  @@index([organizationId, patientId, status])
+  @@index([patientId, toothCode])
+  @@map("treatment_plan_items")
+}
+
+/// COTIZACIÓN. Documento comercial informativo, y nada más.
+///
+/// NO es factura, ni pago, ni recibo. Emitirla no crea un `Payment`, no agenda
+/// nada y no toca el expediente. Aceptarla tampoco significa que el tratamiento
+/// se hizo: eso lo marca una persona con permiso clínico, después.
+model Quote {
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  patientId      String @map("patient_id")
+
+  /// COT-000145. Consecutivo POR CONSULTORIO, con el mismo candado que los
+  /// folios de receta y de orden. Ver lib/utils/folio.ts.
+  folio String
+
+  status     QuoteStatus @default(DRAFT)
+  issuedAt   DateTime    @default(now()) @map("issued_at")
+  /// Hasta cuándo es válida. De aquí se DERIVA si está vencida.
+  validUntil DateTime?   @map("valid_until")
+
+  // Importes ya calculados y congelados. Se guardan en vez de recalcularse al
+  // leer porque una cotización impresa tiene que seguir cuadrando aunque
+  // mañana cambien los precios, los impuestos o la forma de redondear.
+  subtotal Float  @default(0)
+  discount Float  @default(0)
+  tax      Float  @default(0)
+  total    Float  @default(0)
+  currency String @default("MXN")
+
+  notes String?
+  /// Políticas y condiciones, tal como salieron impresas.
+  terms String?
+
+  createdById String    @map("created_by_id")
+  decidedById String?   @map("decided_by_id")
+  decidedAt   DateTime? @map("decided_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  createdBy    User         @relation("QuoteCreatedBy", fields: [createdById], references: [id])
+  decidedBy    User?        @relation("QuoteDecidedBy", fields: [decidedById], references: [id])
+  items        QuoteItem[]
+
+  @@unique([organizationId, folio])
+  @@index([organizationId, patientId])
+  @@index([organizationId, status])
+  @@map("quotes")
+}
+
+/// Un concepto de la cotización, CONGELADO.
+///
+/// Guarda su propio nombre, descripción y precio en vez de leerlos del
+/// catálogo. Si en tres meses la resina sube de 850 a 1000, la COT-000145
+/// tiene que seguir diciendo 850: es lo que se le prometió al paciente por
+/// escrito. La relación con `catalogItem` se conserva solo para trazabilidad.
+model QuoteItem {
+  id      String @id @default(cuid())
+  quoteId String @map("quote_id")
+
+  catalogItemId       String? @map("catalog_item_id")
+  treatmentPlanItemId String? @map("treatment_plan_item_id")
+
+  name        String
+  description String?
+  toothCode   String? @map("tooth_code")
+  quantity    Int     @default(1)
+  unitPrice   Float   @map("unit_price")
+  discount    Float   @default(0)
+  taxRate     Float?  @map("tax_rate")
+  /// (unitPrice × quantity) − discount, ya calculado.
+  total       Float
+
+  quote       Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  catalogItem CatalogItem?       @relation(fields: [catalogItemId], references: [id])
+  treatment   TreatmentPlanItem? @relation(fields: [treatmentPlanItemId], references: [id])
+
+  @@index([quoteId])
+  @@index([treatmentPlanItemId])
+  @@map("quote_items")
 }

@@ -54,4 +54,15 @@ export const templates = {
     wrap("Recuperación de contraseña", `Hola ${p.fullName}, restablece tu contraseña aquí: <a href="${p.link}">${p.link}</a>`),
   followUpReminder: (p: TemplateParams) =>
     wrap("Recordatorio de seguimiento", `Hola ${p.patientName}, tienes un seguimiento programado el ${p.date} con ${p.doctorName}.`),
+  /** Presupuesto dental. Va el detalle en el cuerpo, no adjunto: Doctovio
+   *  imprime desde el navegador y no genera archivos PDF en el servidor. */
+  quoteIssued: (p: TemplateParams) =>
+    wrap(
+      `Presupuesto ${p.folio}`,
+      `Hola ${p.patientName}, te compartimos el presupuesto de tu tratamiento en ${p.clinicName}.` +
+        `${p.detalle}` +
+        `<p style="margin-top:16px;font-size:16px;"><b>Total: ${p.total}</b></p>` +
+        `${p.vigencia}` +
+        `<p style="color:#6b7280;font-size:12px;margin-top:16px;">Es un presupuesto informativo: no es un comprobante fiscal ni acredita ningún pago.</p>`
+    ),
 };

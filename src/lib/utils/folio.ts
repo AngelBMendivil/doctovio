@@ -3,8 +3,9 @@ import type { Prisma } from "@prisma/client";
 /**
  * FOLIOS CONSECUTIVOS POR CONSULTORIO.
  *
- * Único generador para recetas (RX), órdenes médicas (OM) y citas (DOC). Antes
- * había tres copias del mismo `count() + 1`, y las tres tenían el mismo error.
+ * Único generador para recetas (RX), órdenes médicas (OM), citas (DOC) y
+ * cotizaciones (COT). Antes había tres copias del mismo `count() + 1`, y las
+ * tres tenían el mismo error.
  *
  * EL ERROR: estar dentro de una transacción NO evita que dos folios simultáneos
  * choquen. En READ COMMITTED —el nivel por defecto de Postgres— dos
@@ -24,7 +25,7 @@ import type { Prisma } from "@prisma/client";
  * quien llama recuerde envolverlo en un reintento.
  */
 
-export type FolioPrefix = "RX" | "OM" | "DOC";
+export type FolioPrefix = "RX" | "OM" | "DOC" | "COT";
 
 /** Cuenta los folios ya emitidos del prefijo. Cada rama conserva su tipo. */
 async function contarEmitidos(
@@ -42,6 +43,9 @@ async function contarEmitidos(
   if (prefix === "OM") {
     return tx.medicalOrder.count({ where: { organizationId, folio: { startsWith } } });
   }
+  if (prefix === "COT") {
+    return tx.quote.count({ where: { organizationId, folio: { startsWith } } });
+  }
   return tx.appointment.count({ where: { organizationId, folio: { startsWith } } });
 }
 
@@ -52,6 +56,7 @@ async function contarEmitidos(
  *   RX-2026-000123   receta
  *   OM-2026-000123   orden médica
  *   DOC-000123       cita (sin año: el paciente lo dicta por WhatsApp)
+ *   COT-000123       cotización (sin año, por la misma razón)
  */
 export async function generateFolio(
   tx: Prisma.TransactionClient,
@@ -62,8 +67,10 @@ export async function generateFolio(
   // emisiones simultáneas del mismo consultorio calculan el mismo número.
   await tx.$executeRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
 
-  // Las citas no llevan año en el folio: son cortas de dictar por teléfono.
-  const startsWith = prefix === "DOC" ? "DOC-" : `${prefix}-${new Date().getFullYear()}-`;
+  // Citas y cotizaciones no llevan año: la cita se dicta por teléfono y la
+  // cotización se referencia de viva voz en el mostrador.
+  const sinAnio = prefix === "DOC" || prefix === "COT";
+  const startsWith = sinAnio ? `${prefix}-` : `${prefix}-${new Date().getFullYear()}-`;
 
   const count = await contarEmitidos(tx, organizationId, prefix, startsWith);
   return `${startsWith}${formatConsecutivo(count + 1)}`;
@@ -116,9 +123,9 @@ export function parseFolio(
     };
   }
 
-  const sinAnio = /^(DOC)-(\d{1,10})$/.exec(limpio);
+  const sinAnio = /^(DOC|COT)-(\d{1,10})$/.exec(limpio);
   if (sinAnio) {
-    return { prefix: "DOC", year: null, consecutivo: Number(sinAnio[2]) };
+    return { prefix: sinAnio[1] as FolioPrefix, year: null, consecutivo: Number(sinAnio[2]) };
   }
 
   return null;

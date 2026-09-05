@@ -178,3 +178,133 @@ export const STATUS_LABEL: Record<string, string> = {
   COMPLETED: "Terminado",
   CANCELLED: "Cancelado",
 };
+
+// ---------------------------------------------------------------------------
+// Cómo se pinta el diagrama
+// ---------------------------------------------------------------------------
+
+/**
+ * Las tres capas del odontograma, con su color.
+ *
+ * El diagrama NO se pinta con el color del código, sino con el de la CAPA: lo
+ * que el dentista necesita ver de un vistazo es qué está mal, qué falta por
+ * hacer y qué ya se hizo — no de qué material fue la restauración.
+ *
+ * El color va SIEMPRE acompañado de una letra y de texto en el panel. Un
+ * diagrama que solo se entiende a color deja fuera a quien no distingue el rojo
+ * del verde, que es alrededor de uno de cada doce hombres.
+ */
+export type ToothLayer = "FINDING" | "PLANNED" | "DONE" | "MISSING";
+
+export const LAYERS: Record<ToothLayer, { label: string; color: string; letra: string }> = {
+  FINDING: { label: "Hallazgo", color: "#DC2626", letra: "H" },
+  PLANNED: { label: "Planeado", color: "#D97706", letra: "P" },
+  DONE: { label: "Realizado", color: "#059669", letra: "R" },
+  MISSING: { label: "Ausente", color: "#9CA3AF", letra: "—" },
+};
+
+/** Códigos que dejan la pieza fuera de la boca: se pinta gris y tachada. */
+const AUSENTES = ["AUSENTE", "EXTRACCION", "NO_ERUPCIONADO"];
+
+export function isMissingCode(code: string): boolean {
+  return AUSENTES.includes(code);
+}
+
+/**
+ * De qué lado del dibujo queda la cara MESIAL de esta pieza.
+ *
+ * Mesial es "hacia la línea media" y distal "hacia atrás". Como los cuadrantes
+ * 1 y 4 se dibujan a la izquierda de la pantalla, su mesial queda a la DERECHA
+ * del cuadrito; en los cuadrantes 2 y 3 es al revés.
+ *
+ * Sin esto, la mitad de la boca queda espejeada: se marca una caries distal
+ * donde el paciente tiene la mesial.
+ */
+export function mesialSide(toothCode: string): "left" | "right" {
+  const cuadrante = toothCode[0];
+  // 1 y 4 (permanentes), 5 y 8 (temporales) son el lado derecho del paciente.
+  return ["1", "4", "5", "8"].includes(cuadrante) ? "right" : "left";
+}
+
+const NOMBRE_PERMANENTE = [
+  "",
+  "Incisivo central",
+  "Incisivo lateral",
+  "Canino",
+  "Primer premolar",
+  "Segundo premolar",
+  "Primer molar",
+  "Segundo molar",
+  "Tercer molar",
+];
+
+const NOMBRE_TEMPORAL = [
+  "",
+  "Incisivo central",
+  "Incisivo lateral",
+  "Canino",
+  "Primer molar",
+  "Segundo molar",
+];
+
+/**
+ * Nombre de la pieza: "Primer molar superior derecho".
+ *
+ * Derecho e izquierdo son los DEL PACIENTE, no los de la pantalla. Es lo que se
+ * dicta en voz alta y lo que se escribe en el expediente.
+ */
+export function toothName(code: string): string {
+  const dent = dentitionOf(code);
+  if (!dent) return code;
+
+  const pieza = Number(code[1]);
+  const base = dent === "PERMANENT" ? NOMBRE_PERMANENTE[pieza] : NOMBRE_TEMPORAL[pieza];
+  const arriba = isUpper(code) ? "superior" : "inferior";
+  const derecha = ["1", "4", "5", "8"].includes(code[0]) ? "derecho" : "izquierdo";
+  const temporal = dent === "DECIDUOUS" ? " temporal" : "";
+
+  return `${base} ${arriba} ${derecha}${temporal}`;
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo del consultorio
+// ---------------------------------------------------------------------------
+
+/**
+ * Categorías sugeridas al abrir por primera vez Productos y Servicios.
+ *
+ * Se siembran las CATEGORÍAS, nunca los productos: los precios son de cada
+ * consultorio y sembrar una "Resina $850" inventada acabaría cotizándose tal
+ * cual el día que alguien no la revise.
+ */
+export const CATEGORIAS_SUGERIDAS = [
+  "Diagnóstico",
+  "Preventivo",
+  "Restaurativo",
+  "Endodoncia",
+  "Cirugía",
+  "Periodoncia",
+  "Ortodoncia",
+  "Prótesis",
+  "Implantología",
+  "Estética",
+  "Productos",
+  "Otros",
+];
+
+export const TREATMENT_STATUS_LABEL: Record<string, string> = {
+  PENDING: "Pendiente",
+  ACCEPTED: "Aceptado",
+  IN_PROGRESS: "En tratamiento",
+  COMPLETED: "Realizado",
+  CANCELLED: "Cancelado",
+};
+
+export const QUOTE_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Borrador",
+  SENT: "Enviada",
+  ACCEPTED: "Aceptada",
+  REJECTED: "Rechazada",
+  PARTIAL: "Aceptada en parte",
+  CANCELLED: "Cancelada",
+};

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession, isClinicSuspended, isPlatformAdmin } from "@/lib/auth/session";
 import { countNeedsHuman } from "@/lib/conversation/orchestrator";
+import { isDentalClinic } from "@/lib/services/clinic-features";
 import { AppShell } from "@/components/layout/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,10 +25,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // para que nadie se quede colgado sin que el consultorio se entere.
   const pendingConversations = await countNeedsHuman(session.organizationId);
 
+  // El giro del consultorio decide qué se MUESTRA. Las rutas del módulo dental
+  // vuelven a comprobarlo del lado del servidor: ocultar un enlace no protege
+  // nada, la dirección se escribe a mano.
+  const dental = await isDentalClinic(session.organizationId);
+
   // Aquí ya no hay operadores de plataforma: la línea de arriba los sacó. Por
   // eso el enlace a /master no se pasa, no aparecería para nadie.
   return (
-    <AppShell session={session} pendingConversations={pendingConversations}>
+    <AppShell session={session} pendingConversations={pendingConversations} dental={dental}>
       {children}
     </AppShell>
   );

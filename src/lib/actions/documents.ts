@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth/session";
 import { assertPermission } from "@/lib/auth/rbac";
 import { uploadPatientDocument, getDocumentDownloadUrl } from "@/lib/services/documents";
+import { isValidTooth } from "@/lib/constants/odontograma";
 import type { DocumentCategory, PrivacyLevel } from "@prisma/client";
 
 export async function uploadDocumentAction(formData: FormData) {
@@ -29,9 +30,19 @@ export async function uploadDocumentAction(formData: FormData) {
     category,
     privacyLevel: (String(formData.get("privacyLevel") || "GENERAL") as PrivacyLevel),
     description: String(formData.get("description") || ""),
+    // Campo nuevo y OPCIONAL: los formularios que no lo mandan siguen
+    // funcionando igual. Solo el expediente de un consultorio dental lo pinta.
+    toothCode: leerPieza(formData.get("toothCode")),
   });
 
   revalidatePath(`/patients/${patientId}`);
+}
+
+/** Acepta la pieza solo si es un código FDI real; cualquier otra cosa se ignora
+ *  en vez de guardarse, para que no acabe un "16a" en el expediente. */
+function leerPieza(valor: FormDataEntryValue | null): string | undefined {
+  const code = String(valor || "").trim();
+  return code && isValidTooth(code) ? code : undefined;
 }
 
 export async function getDocumentUrlAction(documentId: string) {

@@ -16,6 +16,9 @@ type UploadDocumentParams = {
   privacyLevel: PrivacyLevel;
   description?: string;
   documentDate?: Date;
+  /** Pieza dental (FDI) a la que pertenece: la radiografía del 16. Opcional y
+   *  nula en todo lo que no sea dental, que es el caso normal. */
+  toothCode?: string;
 };
 
 export async function uploadPatientDocument(params: UploadDocumentParams) {
@@ -48,6 +51,7 @@ export async function uploadPatientDocument(params: UploadDocumentParams) {
         documentDate: params.documentDate,
         description: params.description,
         privacyLevel: params.privacyLevel,
+        toothCode: params.toothCode || null,
         uploadedById: params.uploadedById,
       },
       include: { fileAsset: true },

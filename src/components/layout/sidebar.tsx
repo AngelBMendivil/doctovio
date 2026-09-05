@@ -15,6 +15,7 @@ import {
   BarChart3,
   Share2,
   ShieldCheck,
+  Tags,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -26,6 +27,12 @@ import { cn } from "@/lib/utils/cn";
 type Item = { href: string; label: string; icon: typeof LayoutDashboard; roles: string[] };
 const ALL = ["ADMIN", "DOCTOR", "ASSISTANT"];
 
+/**
+ * Menú del consultorio.
+ *
+ * `dental` agrega las entradas del módulo dental y nada más. Un consultorio
+ * médico ve exactamente el menú de siempre: la lista base no cambia.
+ */
 const GROUPS: { label: string; items: Item[] }[] = [
   {
     label: "Operación",
@@ -66,13 +73,30 @@ const ROLE_LABEL: Record<string, string> = {
 export function Sidebar({
   session,
   collapsed = false,
+  dental = false,
   onNavigate,
 }: {
   session: SessionPayload;
   collapsed?: boolean;
+  /** El consultorio es dental. Por omisión, no: nada cambia para los médicos. */
+  dental?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+
+  const grupos = dental
+    ? GROUPS.map((g) =>
+        g.label === "Administración"
+          ? {
+              ...g,
+              items: [
+                { href: "/products", label: "Productos y servicios", icon: Tags, roles: ALL },
+                ...g.items,
+              ],
+            }
+          : g
+      )
+    : GROUPS;
 
   return (
     // El fondo va por variable CSS (no por clase del tema) para que la barra
@@ -86,7 +110,7 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-2">
-        {GROUPS.map((g) => {
+        {grupos.map((g) => {
           const items = g.items.filter((i) => i.roles.includes(session.role));
           if (items.length === 0) return null;
           return (

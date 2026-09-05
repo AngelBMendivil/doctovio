@@ -246,7 +246,19 @@ export async function listPatients(
 }
 
 /** Construye la línea de tiempo del expediente combinando varias entidades. */
-export async function getPatientTimeline(organizationId: string, patientId: string) {
+/**
+ * Línea de tiempo del expediente.
+ *
+ * `incluirDental` es opcional y por omisión NO hace nada: un consultorio médico
+ * ejecuta exactamente las mismas siete consultas de siempre. Se EXTIENDE esta
+ * función en vez de abrir una segunda línea de tiempo dental debajo, porque el
+ * paciente tiene una sola historia y leerla partida en dos no sirve.
+ */
+export async function getPatientTimeline(
+  organizationId: string,
+  patientId: string,
+  opts: { incluirDental?: boolean } = {}
+) {
   const [appointments, visits, consultations, prescriptions, orders, documents, referrals] = await Promise.all([
     db.appointment.findMany({ where: { organizationId, patientId }, orderBy: { scheduledDate: "desc" } }),
     db.visit.findMany({ where: { organizationId, patientId }, orderBy: { arrivalTime: "desc" } }),
@@ -267,6 +279,13 @@ export async function getPatientTimeline(organizationId: string, patientId: stri
     ...documents.map((d) => ({ date: d.uploadedAt, type: "document", label: `Documento: ${d.name}`, refId: d.id })),
     ...referrals.map((r) => ({ date: r.createdAt, type: "referral", label: `Referencia (${r.status})`, refId: r.id })),
   ];
+
+  if (opts.incluirDental) {
+    // Importación diferida: así el core no arrastra el módulo dental cuando no
+    // se le pide, ni siquiera al cargar el archivo.
+    const { getDentalTimeline } = await import("@/lib/services/odontogram");
+    events.push(...(await getDentalTimeline(organizationId, patientId)));
+  }
 
   return events.sort((a, b) => b.date.getTime() - a.date.getTime());
 }

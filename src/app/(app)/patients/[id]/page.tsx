@@ -6,6 +6,9 @@ import { listPatientPrescriptions } from "@/lib/services/prescriptions";
 import { listPatientMedicalOrders } from "@/lib/services/medicalOrders";
 import { listPatientDocuments } from "@/lib/services/documents";
 import { listInsurers } from "@/lib/services/insurers";
+import { isDentalClinic } from "@/lib/services/clinic-features";
+import { getOdontogramSummary } from "@/lib/services/odontogram";
+import { getQuotesSummary } from "@/lib/services/quotes";
 import { InsuranceSection } from "./insurance-section";
 import { PatientGeneralSection } from "@/app/(app)/consultations/[id]/patient-general-section";
 import { calculateAge } from "@/lib/utils/age";
@@ -27,8 +30,12 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
 
   await logAudit({ organizationId: session.organizationId, userId: session.userId, action: "VIEW_RECORD", entity: "patient", entityId: patient.id });
 
+  // El giro del consultorio decide si este expediente tiene odontograma. Para
+  // un consultorio médico, esta pantalla es exactamente la de siempre.
+  const dental = await isDentalClinic(session.organizationId);
+
   const [timeline, prescriptions, orders, documents, insurers] = await Promise.all([
-    getPatientTimeline(session.organizationId, patient.id),
+    getPatientTimeline(session.organizationId, patient.id, { incluirDental: dental }),
     listPatientPrescriptions(session.organizationId, patient.id),
     listPatientMedicalOrders(session.organizationId, patient.id),
     listPatientDocuments(session.organizationId, patient.id),
@@ -36,6 +43,15 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
   ]);
 
   const insurerOptions = insurers.map((i) => ({ id: i.id, name: i.name }));
+
+  // Solo se consulta si hay módulo dental: un consultorio médico no paga dos
+  // consultas de más en cada expediente que abre.
+  const [odonto, cotizaciones] = dental
+    ? await Promise.all([
+        getOdontogramSummary(session.organizationId, patient.id),
+        getQuotesSummary(session.organizationId, patient.id),
+      ])
+    : [null, null];
 
   return (
     <div className="space-y-6">
@@ -58,6 +74,38 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
             {patient.alerts.map((a) => (
               <Badge key={a.id} tone="danger">{a.type}: {a.description}</Badge>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/*
+        ODONTOGRAMA — solo en consultorios dentales.
+
+        Va arriba, junto a las alertas, porque en una consulta dental es lo
+        primero que se abre. Es un resumen con enlace: la pantalla completa vive
+        en su propia ruta para no convertir el expediente en una sola columna
+        interminable.
+      */}
+      {dental && odonto && cotizaciones && (
+        <Card id="odontograma" className="border-primary/30">
+          <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+            <CardTitle>Odontograma</CardTitle>
+            <Link
+              href={`/patients/${patient.id}/odontograma`}
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              Abrir odontograma
+            </Link>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+            <Resumen label="Piezas con registro" valor={odonto.piezasAnotadas} />
+            <Resumen label="Hallazgos" valor={odonto.hallazgos} />
+            <Resumen
+              label="Tratamientos por hacer"
+              valor={odonto.pendientes}
+              tono={odonto.pendientes > 0 ? "warning" : undefined}
+            />
+            <Resumen label="Cotizaciones" valor={cotizaciones.total} />
           </CardContent>
         </Card>
       )}
@@ -178,6 +226,17 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
                 <option value="CONFIDENTIAL">Confidencial</option>
               </Select>
             </div>
+            {/* Solo en consultorios dentales: liga la radiografía a su pieza y
+                así aparece dentro del odontograma, en la historia de ese diente. */}
+            {dental && (
+              <div>
+                <Label htmlFor="toothCode">Pieza dental (opcional)</Label>
+                <Input id="toothCode" name="toothCode" maxLength={2} placeholder="16" />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Notación FDI. Si la escribes, el documento se ve en la historia de esa pieza.
+                </p>
+              </div>
+            )}
             <div className="md:col-span-2">
               <Label htmlFor="description">Descripción</Label>
               <Input id="description" name="description" />
@@ -200,6 +259,26 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
           ))}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/** Un número del resumen dental, con su etiqueta. */
+function Resumen({
+  label,
+  valor,
+  tono,
+}: {
+  label: string;
+  valor: number;
+  tono?: "warning";
+}) {
+  return (
+    <div>
+      <p className={`text-2xl font-semibold ${tono === "warning" ? "text-amber-600" : "text-navy"}`}>
+        {valor}
+      </p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

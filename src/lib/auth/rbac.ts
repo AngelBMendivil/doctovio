@@ -36,6 +36,25 @@ export const PERMISSIONS = {
 
   SEND_REFERRAL: ["ADMIN", "DOCTOR"],
   RESPOND_REFERRAL: ["ADMIN", "DOCTOR"],
+
+  // --- Módulo dental. Se EXTIENDE esta matriz, no se crea otra: un segundo
+  // sistema de permisos es un segundo lugar donde olvidar una regla.
+  //
+  // La línea que importa: el asistente puede VER el odontograma y mover el
+  // estado COMERCIAL de una cotización, pero no toca el expediente clínico.
+  // Marcar un tratamiento como realizado es un acto clínico, no comercial.
+  VIEW_DENTAL_CHART: ["ADMIN", "DOCTOR", "ASSISTANT"],
+  EDIT_DENTAL_CHART: ["ADMIN", "DOCTOR"],
+  MANAGE_DENTAL_TREATMENT: ["ADMIN", "DOCTOR"],
+
+  VIEW_PRODUCTS: ["ADMIN", "DOCTOR", "ASSISTANT"],
+  MANAGE_PRODUCTS: ["ADMIN"],
+
+  VIEW_QUOTES: ["ADMIN", "DOCTOR", "ASSISTANT"],
+  CREATE_QUOTES: ["ADMIN", "DOCTOR", "ASSISTANT"],
+  MANAGE_QUOTES: ["ADMIN", "DOCTOR", "ASSISTANT"],
+  /// Cobrar distinto al precio de catálogo. Ver `lib/services/treatment-plan.ts`.
+  OVERRIDE_PRICE: ["ADMIN", "DOCTOR"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

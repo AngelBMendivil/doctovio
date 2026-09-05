@@ -21,9 +21,9 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
-**Pruebas:** `npm test` — 86 de lógica pura en `tests/unit/`, 2 segundos, sin
-tocar la base. `npm run test:integration` — 44 contra la base de PRUEBAS
-(`doctovio_test`), ~50 s porque van por red. Cubren concurrencia y escrituras
+**Pruebas:** `npm test` — 129 de lógica pura en `tests/unit/`, 3 segundos, sin
+tocar la base. `npm run test:integration` — 67 contra la base de PRUEBAS
+(`doctovio_test`), ~70 s porque van por red. Cubren concurrencia y escrituras
 cruzadas entre consultorios, que es lo que no se puede probar de otra forma.
 
 **Verificación:** `npm run verificar` — comprueba aislamiento entre
@@ -507,6 +507,106 @@ generar dominio; (2) confirmar qué aprobó Meta (¿verificación de negocio?) p
 salir del número de prueba; (3) elegir y registrar el número dedicado del bot;
 (4) construir el modo doctora (admin por WhatsApp); (5) decisiones de la
 doctora: foto aprobada, título UAG, si ofrece estética.
+
+---
+
+## Módulo dental (4 sep 2026)
+
+Se habilita solo cuando `Organization.type = DENTAL`. **Aditivo de principio a
+fin:** ninguna tabla existente cambió de forma —salvo una columna anulable en
+`patient_documents`— y ningún servicio del core lee las tablas nuevas. Apagar el
+módulo deja Doctovio exactamente como estaba.
+
+**Las tres capas, cada una con UN dueño.** Es la decisión de la que cuelga todo
+lo demás:
+
+| Concepto | Dónde vive | Color |
+|---|---|---|
+| Hallazgo (lo que se encontró) | `OdontogramEntry` kind=FINDING | rojo |
+| Tratamiento planeado (lo que se propone) | `TreatmentPlanItem` | ámbar |
+| Tratamiento realizado (lo que se hizo) | `OdontogramEntry` kind=TREATMENT | verde |
+
+Planear NO escribe en la bitácora del odontograma. Marcar "realizado" crea la
+anotación y la deja ligada al renglón del plan (`resultEntryId`). Así el
+diagrama sigue derivándose de una sola fuente y el plan no se vuelve una segunda
+versión del expediente.
+
+**ACEPTAR ≠ REALIZAR.** Aceptar una cotización mueve sus tratamientos de
+`PENDING` a `ACCEPTED` y ahí se detiene. Pasarlos a `COMPLETED` exige
+`MANAGE_DENTAL_TREATMENT` (ADMIN o DOCTOR) y es lo único que escribe en el
+odontograma. Sin esta separación, un expediente terminaría diciendo que se hizo
+una endodoncia que nadie hizo, solo porque alguien firmó un presupuesto.
+Probado en `tests/integration/dental.test.ts`.
+
+**Los precios se COPIAN, nunca se apuntan.** `TreatmentPlanItem` guarda
+`listPrice` (catálogo al planear) y `unitPrice` (lo aplicado a ese paciente);
+`QuoteItem` guarda además su propio nombre y descripción. Subirle el precio a
+una resina no reescribe la COT-000145 que ya se le entregó a alguien. Es la
+misma regla que ya regía `Product → Subscription → BillingCycle` en la cobranza
+de la plataforma.
+
+**`CatalogItem` ≠ `Product`.** `Product` es el catálogo de Doctovio: lo que el
+consultorio le paga a la plataforma, y lo administra el Master. `CatalogItem` es
+lo que el consultorio le cobra a SU paciente. Se evaluó meterle `organizationId`
+a `Product` y se descartó: habría dejado las suscripciones de la plataforma
+mezcladas con las resinas de un dentista, y el panel Master leyéndolas juntas.
+
+**"Vencida" no se guarda, se DERIVA** de `validUntil` (`isExpired()` en
+`quotes.ts`). Misma decisión que `cycleState()` en la cobranza, y por lo mismo:
+guardarla obligaría a un proceso nocturno, y el día que fallara el sistema
+mostraría vigente algo que ya no lo está. Por eso `QuoteStatus` no tiene
+`EXPIRED`.
+
+**El cuadrante 1 se dibuja a la IZQUIERDA de la pantalla** (es la derecha del
+paciente), y la cara **mesial cambia de lado según el cuadrante**: es la que
+mira a la línea media. Espejearla marca la caries en la cara contraria del
+diente. `mesialSide()` en `lib/constants/odontograma.ts`, con pruebas.
+
+**El color nunca va solo.** Cada capa lleva letra (H/P/R/—), la pieza ausente va
+tachada y cada diente tiene su `aria-label` con el resumen en texto. Uno de cada
+doce hombres no distingue el rojo del verde, y este diagrama se lee justo por
+ahí.
+
+**El PDF es la impresión del navegador**, igual que la receta: se reutilizó
+`components/documents/letterhead.tsx` y `PrintButton`. No se agregó ninguna
+librería de PDF. El envío por correo reutiliza Resend y manda el detalle en el
+cuerpo, no adjunto — el servidor no genera archivos.
+
+**Nada se borra.** Una anotación equivocada se CANCELA con motivo obligatorio y
+queda visible tachada en la historia. Un producto usado en una cotización se
+desactiva, no se elimina: borrarlo dejaría hueca una hoja ya entregada.
+
+**Puertas de cada acción del módulo:** sesión → permiso del rol → `assertDentalClinic`
+→ `assertPatientInClinic`. La tercera existe porque ocultar el enlace de la barra
+lateral no protege una ruta: la dirección se escribe a mano.
+
+### Pantallas
+
+- `/patients/[id]/odontograma` — diagrama, plan, historial y cotizaciones, en
+  pestañas. Ruta NUEVA: el expediente de siempre solo ganó una tarjeta de
+  resumen, y únicamente en consultorios dentales.
+- `/products` · `/products/nuevo` · `/products/[id]` — catálogo del consultorio.
+- `/quotes/[id]` — la cotización como se emitió, con membrete y para imprimir.
+
+Todo lo que se elige (pestaña, pieza, dentición, fecha) va en la URL, no en
+`useState`: al guardar, `revalidatePath` remonta el árbol y con estado local el
+dentista perdería la pieza abierta justo después de anotar en ella.
+
+### 🔴 Orden del despliegue
+
+**La migración `20260904160000_modulo_dental` va ANTES que el código.**
+`listPatientDocuments` usa `include`, así que Prisma pide todas las columnas de
+`patient_documents` —incluida `tooth_code`—: si el código sube sin la migración,
+la sección de Documentos del expediente truena en TODOS los consultorios, no
+solo en los dentales.
+
+```powershell
+npx prisma migrate deploy   # primero esto
+git push                    # y luego el código
+```
+
+Pendientes de aplicar en producción: `20260904120000_odontograma` y
+`20260904160000_modulo_dental`. Ambas ya están aplicadas en `doctovio_test`.
 
 ---
 
