@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { assertPermission, hasPermission } from "@/lib/auth/rbac";
 import { assertDentalClinic } from "@/lib/services/clinic-features";
+import { getClinicCurrency } from "@/lib/services/organizations";
 import { addOdontogramEntry, setEntryStatus } from "@/lib/services/odontogram";
 import {
   addTreatmentPlanItem,
@@ -155,6 +156,9 @@ export async function addTreatmentAction(_prev: ActionState, formData: FormData)
       notes: data.notes || undefined,
       findingEntryId: data.findingEntryId || undefined,
       consultationId: data.consultationId || undefined,
+      // Sin producto de catálogo no hay de dónde sacar la moneda: se usa la del
+      // consultorio. Con producto, el servicio toma la suya y esto se ignora.
+      currency: await getClinicCurrency(session.organizationId),
       // El precio distinto al de catálogo es una decisión con permiso propio.
       canOverridePrice: hasPermission(session.role, "OVERRIDE_PRICE"),
     });

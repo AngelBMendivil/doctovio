@@ -114,6 +114,7 @@ export type CatalogItemInput = {
   categoryId?: string;
   description?: string;
   price: number;
+  currency: string;
   taxRate?: number;
 };
 
@@ -133,6 +134,7 @@ export async function createCatalogItem(
       categoryId: data.categoryId || null,
       description: data.description?.trim() || null,
       price: round2(data.price),
+      currency: data.currency,
       taxRate: data.taxRate ?? null,
       createdById: userId,
     },
@@ -144,7 +146,7 @@ export async function createCatalogItem(
     action: "CREATE",
     entity: "catalog_item",
     entityId: item.id,
-    newValues: { name: item.name, code: item.code, price: item.price, type: item.type },
+    newValues: { name: item.name, code: item.code, price: item.price, moneda: item.currency, type: item.type },
   });
 
   return item;
@@ -178,6 +180,7 @@ export async function updateCatalogItem(
       categoryId: data.categoryId || null,
       description: data.description?.trim() || null,
       price: round2(data.price),
+      currency: data.currency,
       taxRate: data.taxRate ?? null,
       isActive: data.isActive,
     },

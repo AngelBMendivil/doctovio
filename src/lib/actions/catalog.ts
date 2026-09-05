@@ -49,6 +49,7 @@ export async function createCatalogItemAction(_prev: ActionState, formData: Form
       categoryId: data.categoryId || undefined,
       description: data.description || undefined,
       price: data.price,
+      currency: data.currency,
       taxRate: data.taxRate,
     });
 
@@ -73,6 +74,7 @@ export async function updateCatalogItemAction(_prev: ActionState, formData: Form
       categoryId: data.categoryId || undefined,
       description: data.description || undefined,
       price: data.price,
+      currency: data.currency,
       taxRate: data.taxRate,
       isActive,
     });

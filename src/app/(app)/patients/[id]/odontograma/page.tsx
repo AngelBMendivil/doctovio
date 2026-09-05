@@ -8,6 +8,7 @@ import { getOdontogram, getOdontogramSummary } from "@/lib/services/odontogram";
 import { listTreatmentPlan, listQuotablePlanItems, itemTotal } from "@/lib/services/treatment-plan";
 import { listPatientQuotes, quoteStateLabel } from "@/lib/services/quotes";
 import { listActiveCatalogItems } from "@/lib/services/catalog";
+import { getClinicCurrency } from "@/lib/services/organizations";
 import { createQuoteAction } from "@/lib/actions/dental";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,12 +63,13 @@ export default async function OdontogramaPage({
   const asOf = verInicial && base.primeraFecha ? finDelDia(base.primeraFecha) : undefined;
   const vista = asOf ? await getOdontogram(session.organizationId, patient.id, { asOf }) : base;
 
-  const [resumen, plan, cotizables, quotes, catalogo] = await Promise.all([
+  const [resumen, plan, cotizables, quotes, catalogo, moneda] = await Promise.all([
     getOdontogramSummary(session.organizationId, patient.id),
     listTreatmentPlan(session.organizationId, patient.id),
     listQuotablePlanItems(session.organizationId, patient.id),
     listPatientQuotes(session.organizationId, patient.id),
     listActiveCatalogItems(session.organizationId),
+    getClinicCurrency(session.organizationId),
   ]);
 
   const canEdit = hasPermission(session.role, "EDIT_DENTAL_CHART");
@@ -99,6 +101,7 @@ export default async function OdontogramaPage({
     id: c.id,
     name: c.name,
     price: c.price,
+    currency: c.currency,
     categoryName: c.category?.name ?? null,
   }));
 
@@ -164,6 +167,7 @@ export default async function OdontogramaPage({
           canEdit={canEdit}
           canComplete={canComplete}
           canOverridePrice={hasPermission(session.role, "OVERRIDE_PRICE")}
+          monedaPorOmision={moneda}
         />
       ) : (
         <ToothPanelEmpty />
@@ -206,6 +210,7 @@ export default async function OdontogramaPage({
                 items={cotizables.map((i) => ({
                   id: i.id,
                   nombre: i.itemName,
+                  currency: i.currency,
                   toothCode: i.toothCode,
                   diagnosis: i.diagnosis,
                   cantidad: i.quantity,

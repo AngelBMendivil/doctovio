@@ -14,9 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
  */
 export function ProductFields({
   categorias,
+  monedaPorOmision = "MXN",
   item,
 }: {
   categorias: { id: string; name: string }[];
+  /** La del consultorio. Cada renglón puede llevar la suya. */
+  monedaPorOmision?: string;
   item?: {
     id: string;
     name: string;
@@ -25,6 +28,7 @@ export function ProductFields({
     categoryId: string | null;
     description: string | null;
     price: number;
+    currency: string;
     taxRate: number | null;
     isActive: boolean;
   };
@@ -70,7 +74,21 @@ export function ProductFields({
         <Label htmlFor="price" required>
           Precio
         </Label>
-        <Input id="price" name="price" inputMode="decimal" required defaultValue={item?.price ?? ""} />
+        <div className="flex gap-2">
+          <Input id="price" name="price" inputMode="decimal" required defaultValue={item?.price ?? ""} />
+          {/* La moneda va PEGADA al precio porque un número sin moneda no es un
+              precio. En la frontera se cobra en las dos y la diferencia entre
+              50 y 50 es de veinte veces. */}
+          <Select
+            name="currency"
+            aria-label="Moneda"
+            defaultValue={item?.currency ?? monedaPorOmision}
+            className="w-32"
+          >
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+          </Select>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Cambiarlo no altera cotizaciones ni tratamientos ya registrados.
         </p>

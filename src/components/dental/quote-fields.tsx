@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 export type QuotableItem = {
   id: string;
   nombre: string;
+  currency: string;
   toothCode: string | null;
   diagnosis: string | null;
   cantidad: number;
@@ -28,9 +29,15 @@ export function QuoteFields({ patientId, items }: { patientId: string; items: Qu
   const [elegidos, setElegidos] = useState<string[]>(items.map((i) => i.id));
   const [extra, setExtra] = useState("0");
 
-  const subtotal = round2(
-    items.filter((i) => elegidos.includes(i.id)).reduce((s, i) => s + i.total, 0)
-  );
+  const seleccionados = items.filter((i) => elegidos.includes(i.id));
+
+  // Una cotización, una moneda: el servidor lo rechaza y aquí se avisa antes
+  // de que la persona llene todo el formulario para nada.
+  const monedas = [...new Set(seleccionados.map((i) => i.currency))];
+  const mezclada = monedas.length > 1;
+  const moneda = monedas[0] ?? "MXN";
+
+  const subtotal = round2(seleccionados.reduce((s, i) => s + i.total, 0));
   const total = round2(Math.max(0, subtotal - (Number(extra) || 0)));
 
   const alternar = (id: string) =>
@@ -59,7 +66,7 @@ export function QuoteFields({ patientId, items }: { patientId: string; items: Qu
                 {i.diagnosis && <span className="text-muted-foreground"> · {i.diagnosis}</span>}
                 {i.cantidad > 1 && <span className="text-muted-foreground"> · ×{i.cantidad}</span>}
               </span>
-              <span className="tabular-nums">{formatMoney(i.total)}</span>
+              <span className="tabular-nums">{formatMoney(i.total, i.currency)}</span>
             </label>
           ))}
         </div>
@@ -100,12 +107,18 @@ export function QuoteFields({ patientId, items }: { patientId: string; items: Qu
       <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 md:col-span-2">
         <div className="flex items-center justify-between text-sm">
           <span>Subtotal ({elegidos.length} concepto{elegidos.length === 1 ? "" : "s"})</span>
-          <span className="tabular-nums">{formatMoney(subtotal)}</span>
+          <span className="tabular-nums">{mezclada ? "—" : formatMoney(subtotal, moneda)}</span>
         </div>
         <div className="mt-1 flex items-center justify-between text-base font-semibold">
           <span>Total estimado</span>
-          <span className="tabular-nums">{formatMoney(total)}</span>
+          <span className="tabular-nums">{mezclada ? "—" : formatMoney(total, moneda)}</span>
         </div>
+        {mezclada && (
+          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Elegiste tratamientos en {monedas.join(" y ")}. Una cotización lleva una sola moneda:
+            genera una por cada una.
+          </p>
+        )}
         <p className="mt-2 text-xs text-muted-foreground">
           Una cotización es un documento informativo: no es factura ni registra ningún pago.
         </p>

@@ -63,6 +63,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
                 categoryId: item.categoryId,
                 description: item.description,
                 price: item.price,
+                currency: item.currency,
                 taxRate: item.taxRate,
                 isActive: item.isActive,
               }}

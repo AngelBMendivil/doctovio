@@ -9,17 +9,9 @@ import { calculateAge } from "@/lib/utils/age";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { TimeSelect } from "../time-select";
 import { SendPreRegButton } from "@/app/(app)/waiting-room/send-prereg-button";
-import {
-  confirmAppointmentAction,
-  cancelAppointmentAction,
-  rescheduleAppointmentAction,
-  markNoShowAction,
-} from "@/lib/actions/appointments";
+import { ChangeAppointment } from "./change-appointment";
+import { confirmAppointmentAction, markNoShowAction } from "@/lib/actions/appointments";
 import { registerArrivalAction } from "@/lib/actions/visits";
 import { ensureAppointmentPreRegAction } from "@/lib/actions/preregistration";
 
@@ -211,47 +203,28 @@ export default async function AppointmentPage({ params }: { params: { id: string
         </Card>
       )}
 
+      {/* Reprogramar y cancelar son la MISMA decisión con dos salidas, así
+          que van en una sola tarjeta. Separadas, cancelar tenía el mismo peso
+          visual que reprogramar, y no lo tiene: una mueve el horario, la otra
+          lo destruye. */}
       {puedeAgendar && !cerrada && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader><CardTitle>Reprogramar</CardTitle></CardHeader>
-            <CardContent>
-              <form action={rescheduleAppointmentAction} className="space-y-3">
-                <input type="hidden" name="appointmentId" value={cita.id} />
-                <input type="hidden" name="durationMinutes" value={cita.durationMinutes} />
-                <div>
-                  <Label htmlFor="rd" required>Nueva fecha</Label>
-                  <Input id="rd" name="scheduledDate" type="date" defaultValue={fechaStr} required />
-                </div>
-                <div>
-                  <Label required>Nueva hora</Label>
-                  <TimeSelect defaultHour={hora} defaultMinute={minuto} />
-                </div>
-                <div>
-                  <Label htmlFor="rr">Motivo del cambio</Label>
-                  <Input id="rr" name="reason" placeholder="El paciente lo pidió" />
-                </div>
-                <Button type="submit" size="sm" variant="secondary">Reprogramar</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Cancelar</CardTitle></CardHeader>
-            <CardContent>
-              {/* Cancelar NO borra: la cita queda con su historial y su motivo.
-                  Un hueco en la agenda sin explicación no le sirve a nadie. */}
-              <form action={cancelAppointmentAction} className="space-y-3">
-                <input type="hidden" name="appointmentId" value={cita.id} />
-                <div>
-                  <Label htmlFor="cr">Motivo de la cancelación</Label>
-                  <Textarea id="cr" name="reason" rows={3} placeholder="Quién canceló y por qué" />
-                </div>
-                <Button type="submit" size="sm" variant="destructive">Cancelar cita</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Mover la cita</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Cambiarla de horario o darla de baja. En los dos casos queda registrado quién y por qué.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ChangeAppointment
+              appointmentId={cita.id}
+              fechaStr={fechaStr}
+              hora={hora}
+              minuto={minuto}
+              durationMinutes={cita.durationMinutes}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {cita.statusHistory.length > 0 && (

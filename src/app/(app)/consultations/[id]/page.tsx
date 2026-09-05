@@ -3,6 +3,14 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getConsultationDetail, getPatientHistory } from "@/lib/services/consultations";
 import { getPatientById } from "@/lib/services/patients";
+import { isDentalClinic } from "@/lib/services/clinic-features";
+import { getOdontogram } from "@/lib/services/odontogram";
+import { listActiveCatalogItems } from "@/lib/services/catalog";
+import { getClinicCurrency } from "@/lib/services/organizations";
+import { hasPermission } from "@/lib/auth/rbac";
+import { ToothChart, type ChartTooth } from "@/components/dental/tooth-chart";
+import { ToothPanel, ToothPanelEmpty } from "@/components/dental/tooth-panel";
+import { allTeeth, type Dentition } from "@/lib/constants/odontograma";
 import { calculateAge } from "@/lib/utils/age";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +32,13 @@ import { HistoryTab } from "./history-tab";
 import { VitalSignsSection } from "./vital-signs-section";
 import { PatientGeneralSection } from "./patient-general-section";
 
-export default async function ConsultationDetailPage({ params }: { params: { id: string } }) {
+export default async function ConsultationDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { diente?: string; denticion?: string };
+}) {
   const session = await getSession();
   if (!session) return null;
 
@@ -64,6 +78,94 @@ export default async function ConsultationDetailPage({ params }: { params: { id:
     chronicText: patient?.chronicConditions.map((c) => c.name).join(", ") || "Sin registro",
     medsText: patient?.currentMedications.map((m) => m.name).join(", ") || "Sin registro",
   };
+
+  // -------- Odontograma (solo consultorios dentales) --------
+  //
+  // Es el MISMO diagrama del expediente, con los mismos componentes: lo que
+  // cambia es que aquí todo lo que se registra queda ligado a esta consulta.
+  // Un segundo odontograma "de consulta" habría sido una segunda verdad.
+  const dental = await isDentalClinic(session.organizationId);
+
+  let odontogramaTab: React.ReactNode = null;
+  if (dental && hasPermission(session.role, "VIEW_DENTAL_CHART")) {
+    const dentition: Dentition = searchParams.denticion === "DECIDUOUS" ? "DECIDUOUS" : "PERMANENT";
+
+    const [vista, catalogo, moneda] = await Promise.all([
+      getOdontogram(session.organizationId, consultation.patientId),
+      listActiveCatalogItems(session.organizationId),
+      getClinicCurrency(session.organizationId),
+    ]);
+
+    const estados: Record<string, ChartTooth> = {};
+    for (const code of allTeeth(dentition)) {
+      const e = vista.estados.get(code);
+      if (e) {
+        estados[code] = {
+          surfaces: e.surfaces,
+          whole: e.whole,
+          missing: e.missing,
+          total: e.total,
+          pendientes: e.pendientes,
+        };
+      }
+    }
+
+    const diente =
+      searchParams.diente && allTeeth(dentition).includes(searchParams.diente) ? searchParams.diente : null;
+
+    odontogramaTab = (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Lo que registres aquí queda ligado a esta consulta.
+              </p>
+              <div className="flex items-center gap-3 text-xs">
+                <Link
+                  href={`/consultations/${consultation.id}?tab=odontograma${
+                    dentition === "PERMANENT" ? "&denticion=DECIDUOUS" : ""
+                  }`}
+                  className="text-primary hover:underline"
+                >
+                  Ver dentición {dentition === "PERMANENT" ? "temporal" : "permanente"}
+                </Link>
+                <Link
+                  href={`/patients/${consultation.patientId}/odontograma`}
+                  className="text-primary hover:underline"
+                >
+                  Plan, historial y cotizaciones →
+                </Link>
+              </div>
+            </div>
+            <ToothChart dentition={dentition} estados={estados} seleccionado={diente} />
+          </CardContent>
+        </Card>
+
+        {diente ? (
+          <ToothPanel
+            organizationId={session.organizationId}
+            patientId={consultation.patientId}
+            toothCode={diente}
+            catalogo={catalogo.map((c) => ({
+              id: c.id,
+              name: c.name,
+              price: c.price,
+              currency: c.currency,
+              categoryName: c.category?.name ?? null,
+            }))}
+            canEdit={hasPermission(session.role, "EDIT_DENTAL_CHART") && !isLocked}
+            canComplete={hasPermission(session.role, "MANAGE_DENTAL_TREATMENT") && !isLocked}
+            canOverridePrice={hasPermission(session.role, "OVERRIDE_PRICE")}
+            monedaPorOmision={moneda}
+            consultationId={consultation.id}
+          />
+        ) : (
+          <ToothPanelEmpty />
+        )}
+      </div>
+    );
+  }
 
   // -------- Datos generales (del expediente / prerregistro) --------
   const datosTab = (
@@ -275,6 +377,10 @@ export default async function ConsultationDetailPage({ params }: { params: { id:
           { id: "dx", label: "Diagnósticos", content: dxTab },
           { id: "receta", label: "Emitir receta", content: recetaTab },
           { id: "orden", label: "Orden médica", content: ordenTab },
+          // El odontograma va AL FINAL de la lista pero es lo primero que abre
+          // un dentista, así que se le da su pestaña aquí y no solo en el
+          // expediente: el paciente está en el sillón, no en la sala.
+          ...(odontogramaTab ? [{ id: "odontograma", label: "Odontograma", content: odontogramaTab }] : []),
         ]}
       />
     </div>

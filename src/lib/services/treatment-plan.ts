@@ -37,6 +37,8 @@ export type PlanItemInput = {
   notes?: string;
   findingEntryId?: string;
   consultationId?: string;
+  /** Moneda cuando no hay producto de catálogo. La del consultorio, normalmente. */
+  currency?: string;
   /** ¿Puede cobrar distinto al catálogo? Lo decide el rol, en la acción. */
   canOverridePrice?: boolean;
 };
@@ -76,6 +78,9 @@ export async function addTreatmentPlanItem(input: PlanItemInput) {
   let itemName = findCode(input.treatmentCode)?.label ?? input.treatmentCode;
   let listPrice: number | null = null;
   let unitPrice = round2(input.unitPrice ?? 0);
+  // Sin producto de catálogo, la moneda es la del consultorio. Con producto,
+  // manda la del producto: es la que se le dijo al paciente.
+  let currency = input.currency ?? "MXN";
 
   if (input.catalogItemId) {
     const producto = await db.catalogItem.findFirst({
@@ -86,6 +91,7 @@ export async function addTreatmentPlanItem(input: PlanItemInput) {
 
     itemName = producto.name;
     listPrice = producto.price;
+    currency = producto.currency;
     unitPrice = input.unitPrice === undefined ? producto.price : round2(input.unitPrice);
 
     if (unitPrice !== producto.price && !input.canOverridePrice) {
@@ -107,6 +113,7 @@ export async function addTreatmentPlanItem(input: PlanItemInput) {
       itemName,
       listPrice,
       unitPrice,
+      currency,
       quantity: Math.max(1, input.quantity ?? 1),
       discount: round2(Math.max(0, input.discount ?? 0)),
       notes: input.notes?.trim() || null,
@@ -127,6 +134,7 @@ export async function addTreatmentPlanItem(input: PlanItemInput) {
       tratamiento: item.treatmentCode,
       producto: item.itemName,
       precio: item.unitPrice,
+      moneda: item.currency,
     },
   });
 
@@ -166,15 +174,39 @@ export async function getTreatmentPlanItem(organizationId: string, id: string) {
   });
 }
 
-/** Suma del plan. Solo cuenta lo vivo: lo cancelado no se le cobra a nadie. */
-export function planTotals(items: { unitPrice: number; quantity: number; discount: number; status: TreatmentStatus }[]) {
+type FilaSumable = {
+  unitPrice: number;
+  quantity: number;
+  discount: number;
+  status: TreatmentStatus;
+  currency?: string;
+};
+
+/**
+ * Suma del plan, AGRUPADA POR MONEDA.
+ *
+ * No se devuelve un solo total porque sumar pesos con dólares da un número que
+ * no significa nada. En un consultorio de la frontera, cobrar unos servicios en
+ * cada moneda es normal, y un "$4,200" que mezcla las dos es peor que no
+ * mostrar nada: parece correcto.
+ *
+ * Lo cancelado no entra: no se le cobra a nadie.
+ */
+export function planTotals(items: FilaSumable[]) {
   const vivos = items.filter((i) => i.status !== "CANCELLED");
-  const subtotal = round2(vivos.reduce((s, i) => s + round2(i.unitPrice * i.quantity), 0));
-  const discount = round2(vivos.reduce((s, i) => s + i.discount, 0));
+
+  const porMoneda = new Map<string, { currency: string; subtotal: number; discount: number; total: number }>();
+  for (const i of vivos) {
+    const currency = i.currency ?? "MXN";
+    const acc = porMoneda.get(currency) ?? { currency, subtotal: 0, discount: 0, total: 0 };
+    acc.subtotal = round2(acc.subtotal + round2(i.unitPrice * i.quantity));
+    acc.discount = round2(acc.discount + i.discount);
+    acc.total = round2(Math.max(0, acc.subtotal - acc.discount));
+    porMoneda.set(currency, acc);
+  }
+
   return {
-    subtotal,
-    discount,
-    total: round2(Math.max(0, subtotal - discount)),
+    porMoneda: [...porMoneda.values()],
     pendientes: items.filter((i) => i.status === "PENDING").length,
     aceptados: items.filter((i) => i.status === "ACCEPTED").length,
     realizados: items.filter((i) => i.status === "COMPLETED").length,

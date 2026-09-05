@@ -166,7 +166,7 @@ export async function getToothHistory(organizationId: string, patientId: string,
     include: {
       doctor: { select: { fullName: true } },
       consultation: { select: { id: true, startTime: true } },
-      planItemResult: { select: { id: true, itemName: true, unitPrice: true } },
+      planItemResult: { select: { id: true, itemName: true, unitPrice: true, currency: true } },
     },
   });
 }

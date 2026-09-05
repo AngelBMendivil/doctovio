@@ -41,6 +41,9 @@ export const catalogItemSchema = z.object({
   categoryId: optText(40),
   description: optText(1000),
   price: money,
+  /// Cerrado a las dos que maneja el sistema: en la frontera se cobra en las
+  /// dos, y una tercera sin tipo de cambio no significaría nada.
+  currency: z.enum(["MXN", "USD"]).default("MXN"),
   taxRate: moneyOpt,
 });
 

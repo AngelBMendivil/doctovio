@@ -2339,6 +2339,10 @@ model TreatmentPlanItem {
   listPrice     Float?  @map("list_price")
   /// Precio efectivamente aplicado a este paciente.
   unitPrice     Float   @map("unit_price")
+  /// Moneda, COPIADA del producto igual que el precio. Sin ella, un servicio
+  /// cotizado en dólares se sumaría como si fueran pesos: en la frontera eso
+  /// no es un detalle, es multiplicar por veinte.
+  currency      String  @default("MXN")
   quantity      Int     @default(1)
   /// Descuento en importe, no en porcentaje: es lo que se negocia de viva voz.
   discount      Float   @default(0)

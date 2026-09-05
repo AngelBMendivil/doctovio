@@ -152,3 +152,13 @@ export async function getClinicTimezone(organizationId: string): Promise<string>
   });
   return s?.timezone || "America/Mexico_City";
 }
+
+/** Moneda con la que trabaja el consultorio. Es el valor por omisión al dar de
+ *  alta un producto; cada renglón puede tener la suya. */
+export async function getClinicCurrency(organizationId: string): Promise<string> {
+  const s = await db.organizationSettings.findUnique({
+    where: { organizationId },
+    select: { currency: true },
+  });
+  return s?.currency || "MXN";
+}

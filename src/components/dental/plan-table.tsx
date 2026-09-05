@@ -4,7 +4,7 @@ import { ActionButton } from "@/components/dental/action-button";
 import { setTreatmentStatusAction, completeTreatmentAction } from "@/lib/actions/dental";
 import { TREATMENT_STATUS_LABEL, surfaceLabel } from "@/lib/constants/odontograma";
 import { formatMoney } from "@/lib/utils/money";
-import { itemTotal } from "@/lib/services/treatment-plan";
+import { itemTotal, planTotals } from "@/lib/services/treatment-plan";
 import type { ToothSurface, TreatmentStatus } from "@prisma/client";
 
 type Fila = {
@@ -15,6 +15,7 @@ type Fila = {
   itemName: string;
   listPrice: number | null;
   unitPrice: number;
+  currency: string;
   quantity: number;
   discount: number;
   status: TreatmentStatus;
@@ -56,11 +57,10 @@ export function PlanTable({
     );
   }
 
-  const vivos = items.filter((i) => i.status !== "CANCELLED");
-  const total = vivos.reduce((s, i) => s + itemTotal(i), 0);
-  const pendiente = vivos
-    .filter((i) => i.status !== "COMPLETED")
-    .reduce((s, i) => s + itemTotal(i), 0);
+  // Agrupado por moneda: sumar pesos con dólares da un número que no significa
+  // nada, y con el signo de pesos delante parecería correcto.
+  const totales = planTotals(items);
+  const porHacer = planTotals(items.filter((i) => i.status !== "COMPLETED"));
 
   return (
     <div className="space-y-4">
@@ -110,20 +110,20 @@ export function PlanTable({
                   </td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{i.quantity}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">
-                    {formatMoney(i.unitPrice)}
+                    {formatMoney(i.unitPrice, i.currency)}
                     {/* Si se cobró distinto al catálogo, se ve: son dos números
                         distintos y confundirlos esconde un descuento. */}
                     {i.listPrice !== null && i.listPrice !== i.unitPrice && (
                       <span className="block text-[11px] text-muted-foreground line-through">
-                        {formatMoney(i.listPrice)}
+                        {formatMoney(i.listPrice, i.currency)}
                       </span>
                     )}
                   </td>
                   <td className="px-2 py-2.5 text-right tabular-nums">
-                    {i.discount > 0 ? formatMoney(i.discount) : "—"}
+                    {i.discount > 0 ? formatMoney(i.discount, i.currency) : "—"}
                   </td>
                   <td className="px-2 py-2.5 text-right font-medium tabular-nums">
-                    {formatMoney(itemTotal(i))}
+                    {formatMoney(itemTotal(i), i.currency)}
                   </td>
                   <td className="px-2 py-2.5">
                     <Badge tone={TONO[i.status]}>{TREATMENT_STATUS_LABEL[i.status]}</Badge>
@@ -166,13 +166,22 @@ export function PlanTable({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-6 border-t border-border pt-3 text-sm">
-        <span className="text-muted-foreground">
-          Por hacer: <strong className="tabular-nums text-foreground">{formatMoney(pendiente)}</strong>
-        </span>
-        <span>
-          Total estimado del plan: <strong className="tabular-nums">{formatMoney(total)}</strong>
-        </span>
+      <div className="space-y-1 border-t border-border pt-3 text-sm">
+        {totales.porMoneda.map((t) => {
+          const pendiente = porHacer.porMoneda.find((p) => p.currency === t.currency)?.total ?? 0;
+          return (
+            <div key={t.currency} className="flex flex-wrap items-center justify-end gap-6">
+              <span className="text-muted-foreground">
+                Por hacer:{" "}
+                <strong className="tabular-nums text-foreground">{formatMoney(pendiente, t.currency)}</strong>
+              </span>
+              <span>
+                Total estimado {totales.porMoneda.length > 1 && `en ${t.currency}`}:{" "}
+                <strong className="tabular-nums">{formatMoney(t.total, t.currency)}</strong>
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

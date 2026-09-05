@@ -12,6 +12,7 @@ export type CatalogOption = {
   id: string;
   name: string;
   price: number;
+  currency: string;
   categoryName: string | null;
 };
 
@@ -31,12 +32,15 @@ export function TreatmentFields({
   toothCode,
   catalogo,
   canOverridePrice,
+  monedaPorOmision = "MXN",
   findingEntryId,
   consultationId,
 }: {
   patientId: string;
   toothCode?: string;
   catalogo: CatalogOption[];
+  /** La del consultorio, para los tratamientos sin producto de catálogo. */
+  monedaPorOmision?: string;
   canOverridePrice: boolean;
   findingEntryId?: string;
   consultationId?: string;
@@ -49,6 +53,9 @@ export function TreatmentFields({
 
   const producto = catalogo.find((c) => c.id === catalogItemId);
   const piezaCompleta = isWholeToothCode(treatmentCode);
+  // La moneda la manda el producto: es la que se le dijo al paciente. Sin
+  // producto, la del consultorio.
+  const moneda = producto?.currency ?? monedaPorOmision;
 
   const total = lineTotal(Number(precio) || 0, Number(cantidad) || 1, Number(descuento) || 0);
   const fueraDeCatalogo = producto ? Number(precio) !== producto.price : false;
@@ -98,7 +105,7 @@ export function TreatmentFields({
           {catalogo.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
-              {c.categoryName ? ` · ${c.categoryName}` : ""} — {formatMoney(c.price)}
+              {c.categoryName ? ` · ${c.categoryName}` : ""} — {formatMoney(c.price, c.currency)} {c.currency}
             </option>
           ))}
         </Select>
@@ -110,7 +117,7 @@ export function TreatmentFields({
       </div>
 
       <div>
-        <Label htmlFor="unitPrice">Precio unitario</Label>
+        <Label htmlFor="unitPrice">Precio unitario ({moneda})</Label>
         <Input
           id="unitPrice"
           name="unitPrice"
@@ -122,7 +129,7 @@ export function TreatmentFields({
         />
         {producto && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Catálogo: {formatMoney(producto.price)}
+            Catálogo: {formatMoney(producto.price, producto.currency)}
             {fueraDeCatalogo && canOverridePrice && " · se guardará el precio aplicado y el de lista"}
             {!canOverridePrice && " · tu rol no puede modificarlo"}
           </p>
@@ -179,7 +186,7 @@ export function TreatmentFields({
       </div>
 
       <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm md:col-span-2">
-        Importe de este renglón: <strong>{formatMoney(total)}</strong>
+        Importe de este renglón: <strong>{formatMoney(total, moneda)}</strong>
         <span className="ml-2 text-xs text-muted-foreground">
           Es una propuesta, no un cobro: agregarla al plan no registra ningún pago.
         </span>

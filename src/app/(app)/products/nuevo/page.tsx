@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/rbac";
 import { isDentalClinic } from "@/lib/services/clinic-features";
 import { listCategories, ensureCategories } from "@/lib/services/catalog";
+import { getClinicCurrency } from "@/lib/services/organizations";
 import { createCatalogItemAction, createCategoryAction } from "@/lib/actions/catalog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,10 @@ export default async function NuevoProductoPage() {
   if (!hasPermission(session.role, "MANAGE_PRODUCTS")) redirect("/products");
 
   await ensureCategories(session.organizationId);
-  const categorias = await listCategories(session.organizationId);
+  const [categorias, moneda] = await Promise.all([
+    listCategories(session.organizationId),
+    getClinicCurrency(session.organizationId),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -38,7 +42,10 @@ export default async function NuevoProductoPage() {
         </CardHeader>
         <CardContent>
           <SettingsForm action={createCatalogItemAction} submitLabel="Guardar" className={GRID} resetOnSuccess>
-            <ProductFields categorias={categorias.map((c) => ({ id: c.id, name: c.name }))} />
+            <ProductFields
+              categorias={categorias.map((c) => ({ id: c.id, name: c.name }))}
+              monedaPorOmision={moneda}
+            />
           </SettingsForm>
         </CardContent>
       </Card>

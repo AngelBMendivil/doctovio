@@ -110,11 +110,13 @@ describe("catálogo del consultorio", () => {
       name: "Resina posterior A",
       type: "SERVICE",
       price: 850,
+      currency: "MXN",
     });
     await createCatalogItem(B.orgId, B.doctorId, {
       name: "Resina posterior B",
       type: "SERVICE",
       price: 1200,
+      currency: "MXN",
     });
 
     const deA = await listActiveCatalogItems(A.orgId);
@@ -126,9 +128,9 @@ describe("catálogo del consultorio", () => {
   });
 
   it("no deja repetir el código dentro del mismo consultorio", async () => {
-    await createCatalogItem(A.orgId, A.doctorId, { name: "Limpieza", code: "LIM001", type: "SERVICE", price: 700 });
+    await createCatalogItem(A.orgId, A.doctorId, { name: "Limpieza", code: "LIM001", type: "SERVICE", price: 700, currency: "MXN" });
     await expect(
-      createCatalogItem(A.orgId, A.doctorId, { name: "Otra limpieza", code: "LIM001", type: "SERVICE", price: 900 })
+      createCatalogItem(A.orgId, A.doctorId, { name: "Otra limpieza", code: "LIM001", type: "SERVICE", price: 900, currency: "MXN" })
     ).rejects.toThrow(/ya lo usa/i);
   });
 
@@ -138,6 +140,7 @@ describe("catálogo del consultorio", () => {
       code: "LIM001",
       type: "SERVICE",
       price: 800,
+      currency: "MXN",
     });
     expect(enB.code).toBe("LIM001");
   });
@@ -271,6 +274,7 @@ describe("precios históricos", () => {
       name: "Extracción quirúrgica",
       type: "SERVICE",
       price: 2500,
+      currency: "MXN",
     });
 
     const tratamiento = await addTreatmentPlanItem({
@@ -295,6 +299,7 @@ describe("precios históricos", () => {
       name: "Extracción quirúrgica",
       type: "SERVICE",
       price: 3200,
+      currency: "MXN",
       isActive: true,
     });
 
@@ -306,6 +311,61 @@ describe("precios históricos", () => {
     expect(historica!.total).toBe(2500);
     expect(historica!.items[0].unitPrice).toBe(2500);
     expect(historica!.items[0].name).toBe("Extracción quirúrgica");
+  });
+});
+
+describe("moneda", () => {
+  it("el tratamiento copia la moneda del producto, no solo el precio", async () => {
+    const enDolares = await createCatalogItem(A.orgId, A.doctorId, {
+      name: "Blanqueamiento",
+      type: "SERVICE",
+      price: 250,
+      currency: "USD",
+    });
+
+    const item = await addTreatmentPlanItem({
+      organizationId: A.orgId,
+      patientId: A.patientId,
+      userId: A.doctorId,
+      toothCode: "13",
+      treatmentCode: "RESINA",
+      surfaces: ["VESTIBULAR"],
+      catalogItemId: enDolares.id,
+      // Aunque el consultorio trabaje en pesos, manda la del producto.
+      currency: "MXN",
+    });
+    expect(item.currency).toBe("USD");
+    expect(item.unitPrice).toBe(250);
+  });
+
+  it("no deja cotizar pesos y dólares en la misma hoja", async () => {
+    const plan = await listTreatmentPlan(A.orgId, A.patientId);
+    const enUsd = plan.find((p) => p.currency === "USD" && p.status === "PENDING")!;
+    const enMxn = plan.find((p) => p.currency === "MXN" && p.status === "PENDING")!;
+
+    // 250 USD y 850 MXN no se suman: el total impreso sería mentira.
+    await expect(
+      createQuoteFromPlan({
+        organizationId: A.orgId,
+        patientId: A.patientId,
+        userId: A.doctorId,
+        treatmentItemIds: [enUsd.id, enMxn.id],
+      })
+    ).rejects.toThrow(/monedas distintas/i);
+  });
+
+  it("la cotización toma la moneda de sus conceptos", async () => {
+    const plan = await listTreatmentPlan(A.orgId, A.patientId);
+    const enUsd = plan.find((p) => p.currency === "USD" && p.status === "PENDING")!;
+
+    const cot = await createQuoteFromPlan({
+      organizationId: A.orgId,
+      patientId: A.patientId,
+      userId: A.doctorId,
+      treatmentItemIds: [enUsd.id],
+    });
+    expect(cot.currency).toBe("USD");
+    expect(cot.total).toBe(250);
   });
 });
 

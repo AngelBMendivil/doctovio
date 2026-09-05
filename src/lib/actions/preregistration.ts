@@ -94,7 +94,15 @@ export async function submitPreRegistrationAction(_prev: ActionState, formData: 
       .join(", ");
 
     const data = preRegistrationSchema.parse(raw);
-    await submitPreRegistration(token, data);
+    const enviado = await submitPreRegistration(token, data);
+
+    // El paciente llena esto desde SU teléfono, pero quien lo está esperando es
+    // el consultorio. Sin estas líneas, la sala de espera seguía diciendo
+    // "requiere prerregistro" después de que el paciente ya lo había mandado.
+    revalidatePath("/waiting-room");
+    revalidatePath("/preregistrations");
+    if (enviado.patientId) revalidatePath(`/patients/${enviado.patientId}`);
+    if (enviado.appointmentId) revalidatePath(`/appointments/${enviado.appointmentId}`);
 
     return { ok: true, message: "¡Gracias! Recibimos tus datos correctamente." };
   } catch (e) {

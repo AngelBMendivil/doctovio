@@ -38,11 +38,16 @@ export async function ToothPanel({
   canEdit,
   canComplete,
   canOverridePrice,
+  monedaPorOmision,
+  consultationId,
 }: {
   organizationId: string;
   patientId: string;
   toothCode: string;
   catalogo: CatalogOption[];
+  monedaPorOmision?: string;
+  /** Cuando se captura DESDE una consulta, todo queda ligado a ella. */
+  consultationId?: string;
   canEdit: boolean;
   canComplete: boolean;
   canOverridePrice: boolean;
@@ -101,7 +106,7 @@ export async function ToothPanel({
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {fecha(e.recordedAt)} · {e.doctor.fullName}
-                          {e.planItemResult && ` · ${formatMoney(e.planItemResult.unitPrice)}`}
+                          {e.planItemResult && ` · ${formatMoney(e.planItemResult.unitPrice, e.planItemResult.currency)}`}
                         </p>
                         {e.notes && <p className="mt-0.5 text-xs text-muted-foreground">{e.notes}</p>}
                       </div>
@@ -137,7 +142,7 @@ export async function ToothPanel({
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatMoney(p.unitPrice)} · {fecha(p.createdAt)} · {p.createdBy.fullName}
+                        {formatMoney(p.unitPrice, p.currency)} · {fecha(p.createdAt)} · {p.createdBy.fullName}
                         {p.quoteItems[0] && ` · ${p.quoteItems[0].quote.folio}`}
                       </p>
                     </div>
@@ -190,7 +195,7 @@ export async function ToothPanel({
             </CardHeader>
             <CardContent>
               <SettingsForm action={addEntryAction} submitLabel="Guardar en el expediente" className={GRID}>
-                <EntryFields patientId={patientId} toothCode={toothCode} />
+                <EntryFields patientId={patientId} toothCode={toothCode} consultationId={consultationId} />
               </SettingsForm>
             </CardContent>
           </Card>
@@ -209,6 +214,8 @@ export async function ToothPanel({
                   toothCode={toothCode}
                   catalogo={catalogo}
                   canOverridePrice={canOverridePrice}
+                  monedaPorOmision={monedaPorOmision}
+                  consultationId={consultationId}
                 />
               </SettingsForm>
             </CardContent>

@@ -99,6 +99,18 @@ export async function createQuoteFromPlan(params: {
     );
   }
 
+  // UNA cotización, UNA moneda. Sumar pesos con dólares da un total que no
+  // significa nada, y en una hoja impresa con el signo de pesos parecería
+  // correcto. Si el paciente lleva tratamientos en las dos, van en dos
+  // cotizaciones — que además es como se le cobrarán.
+  const monedas = [...new Set(items.map((i) => i.currency))];
+  if (monedas.length > 1) {
+    throw new Error(
+      `Estos tratamientos están en monedas distintas (${monedas.join(" y ")}). Genera una cotización por cada una.`
+    );
+  }
+  const currency = monedas[0] ?? "MXN";
+
   const renglones = items.map((i) => ({
     treatmentPlanItemId: i.id,
     catalogItemId: i.catalogItemId,
@@ -140,6 +152,7 @@ export async function createQuoteFromPlan(params: {
         discount,
         tax,
         total,
+        currency,
         notes: params.notes?.trim() || null,
         terms: params.terms?.trim() || null,
         createdById: userId,
@@ -155,7 +168,7 @@ export async function createQuoteFromPlan(params: {
     action: "CREATE",
     entity: "quote",
     entityId: quote.id,
-    newValues: { folio: quote.folio, total: quote.total, conceptos: quote.items.length },
+    newValues: { folio: quote.folio, total: quote.total, moneda: quote.currency, conceptos: quote.items.length },
   });
 
   return quote;
@@ -257,15 +270,21 @@ export async function setQuoteStatus(
 export async function getQuotesSummary(organizationId: string, patientId: string) {
   const quotes = await db.quote.findMany({
     where: { organizationId, patientId },
-    select: { status: true, total: true, validUntil: true },
+    select: { status: true, total: true, currency: true, validUntil: true },
   });
+
+  // El monto aceptado se agrupa por moneda, por lo mismo que el plan: un solo
+  // número que mezcle pesos y dólares no significa nada.
+  const aceptadas = quotes.filter((q) => q.status === "ACCEPTED");
+  const porMoneda = new Map<string, number>();
+  for (const q of aceptadas) {
+    porMoneda.set(q.currency, round2((porMoneda.get(q.currency) ?? 0) + q.total));
+  }
 
   return {
     total: quotes.length,
-    aceptadas: quotes.filter((q) => q.status === "ACCEPTED").length,
-    montoAceptado: round2(
-      quotes.filter((q) => q.status === "ACCEPTED").reduce((s, q) => s + q.total, 0)
-    ),
+    aceptadas: aceptadas.length,
+    montoAceptado: [...porMoneda.entries()].map(([currency, monto]) => ({ currency, monto })),
     vencidas: quotes.filter((q) => isExpired(q)).length,
   };
 }

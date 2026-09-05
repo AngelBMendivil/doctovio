@@ -110,31 +110,48 @@ describe("capas del diagrama", () => {
 });
 
 describe("totales del plan de tratamiento", () => {
-  const item = (unitPrice: number, quantity = 1, discount = 0, status: TreatmentStatus = "PENDING") => ({
-    unitPrice,
-    quantity,
-    discount,
-    status,
-  });
+  const item = (
+    unitPrice: number,
+    quantity = 1,
+    discount = 0,
+    status: TreatmentStatus = "PENDING",
+    currency = "MXN"
+  ) => ({ unitPrice, quantity, discount, status, currency });
+
+  /** Atajo para los casos de una sola moneda, que son casi todos. */
+  const unica = (t: ReturnType<typeof planTotals>) => t.porMoneda[0];
 
   it("suma lo vivo", () => {
     const t = planTotals([item(850), item(850), item(2500)]);
-    expect(t.subtotal).toBe(4200);
-    expect(t.total).toBe(4200);
+    expect(unica(t).subtotal).toBe(4200);
+    expect(unica(t).total).toBe(4200);
     expect(t.pendientes).toBe(3);
   });
 
   it("lo cancelado NO se le cobra a nadie", () => {
     const t = planTotals([item(850), item(2500, 1, 0, "CANCELLED")]);
-    expect(t.subtotal).toBe(850);
-    expect(t.total).toBe(850);
+    expect(unica(t).subtotal).toBe(850);
+    expect(unica(t).total).toBe(850);
   });
 
   it("los descuentos bajan el total", () => {
     const t = planTotals([item(1000, 1, 150)]);
-    expect(t.subtotal).toBe(1000);
-    expect(t.discount).toBe(150);
-    expect(t.total).toBe(850);
+    expect(unica(t).subtotal).toBe(1000);
+    expect(unica(t).discount).toBe(150);
+    expect(unica(t).total).toBe(850);
+  });
+
+  it("NO suma pesos con dólares: los separa", () => {
+    // Un solo total mezclando monedas es peor que no mostrar nada, porque con
+    // el signo de pesos delante parece correcto. Aquí, 50 USD no son 50 MXN.
+    const t = planTotals([item(850, 1, 0, "PENDING", "MXN"), item(50, 1, 0, "PENDING", "USD")]);
+    expect(t.porMoneda).toHaveLength(2);
+    expect(t.porMoneda.find((m) => m.currency === "MXN")!.total).toBe(850);
+    expect(t.porMoneda.find((m) => m.currency === "USD")!.total).toBe(50);
+  });
+
+  it("un plan vacío no inventa monedas", () => {
+    expect(planTotals([]).porMoneda).toEqual([]);
   });
 
   it("cuenta por separado lo aceptado y lo realizado", () => {
