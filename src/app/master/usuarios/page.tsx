@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth/session";
 import { listAllUsers } from "@/lib/services/platform-users";
 import { listClinicsForPlatform } from "@/lib/services/clinics";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CreateUserForm } from "@/components/master/master-forms";
 import { UserFilters } from "@/components/master/user-filters";
 import type { UserRoleName } from "@prisma/client";
 
@@ -43,13 +41,23 @@ export default async function UsuariosPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-navy">Usuarios</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {hayFiltros
-            ? `${users.length} de los usuarios de la plataforma`
-            : `${users.length} usuario(s) en ${clinics.length} consultorio(s)`}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-navy">Usuarios</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {hayFiltros
+              ? `${users.length} de los usuarios de la plataforma`
+              : `${users.length} usuario(s) en ${clinics.length} consultorio(s)`}
+          </p>
+        </div>
+
+        <Link
+          href="/master/usuarios/nuevo"
+          className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Nuevo usuario
+        </Link>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5 shadow-card">
@@ -137,16 +145,6 @@ export default async function UsuariosPage({
         Los usuarios nunca se borran, solo se desactivan: uno borrado dejaría
         huérfanas las citas que creó y las recetas que firmó.
       </p>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nuevo usuario</CardTitle>
-          <CardDescription>Respeta el tope de usuarios del plan del consultorio.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateUserForm clinics={opciones} />
-        </CardContent>
-      </Card>
     </div>
   );
 }

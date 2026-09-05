@@ -256,75 +256,6 @@ export function NewClinicForm({
   );
 }
 
-/** Alta de usuario dentro de UN consultorio ya elegido. */
-export function AddUserToClinicForm({
-  organizationId,
-  clinicCode,
-  disponibles,
-}: {
-  organizationId: string;
-  clinicCode: string;
-  disponibles: number;
-}) {
-  const [state, action] = useFormState(createUserAction, initial);
-  // Se muestra el usuario que le va a tocar mientras se escribe el nombre.
-  const [nombre, setNombre] = useState("");
-
-  if (disponibles <= 0) {
-    return (
-      <Alert tone="info">
-        Este consultorio ya usó los {" "}
-        <strong>todos los usuarios de su plan</strong>. Sube el tope en la pestaña
-        Configuración antes de agregar otro.
-      </Alert>
-    );
-  }
-
-  return (
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="u-fullName">Nombre completo *</Label>
-          <Input id="u-fullName" name="fullName" required onChange={(e) => setNombre(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="u-role">Rol</Label>
-          <Select id="u-role" name="role" defaultValue="ASSISTANT">
-            <option value="DOCTOR">Doctor</option>
-            <option value="ADMIN">Administrativo</option>
-            <option value="ASSISTANT">Secretaria</option>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="u-email">Correo *</Label>
-          <Input id="u-email" name="email" type="email" required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="u-password">Contraseña temporal *</Label>
-          <Input id="u-password" name="password" type="password" minLength={8} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="u-phone">Teléfono</Label>
-          <Input id="u-phone" name="phone" />
-        </div>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Quedan {disponibles} lugar(es) en el plan. Podrá entrar con{" "}
-        <code className="rounded bg-muted px-1 py-0.5 font-mono text-navy">
-          {nombre ? suggestUsername(clinicCode, nombre) : `${clinicCode.toLowerCase()}.nombre`}
-        </code>
-        , o con su correo. Los dos funcionan para entrar.
-      </p>
-
-      <Msg state={state} />
-      <Submit>Agregar usuario</Submit>
-    </form>
-  );
-}
-
 /** Contrata (o cambia) el producto de un consultorio. */
 export function SubscribeForm({
   organizationId,
@@ -541,17 +472,28 @@ export function WaiveCycleForm({ cycleId }: { cycleId: string }) {
 
 // ------------------------------------------------------------------ USUARIOS
 
-type ClinicOption = { id: string; name: string };
+type ClinicOption = { id: string; name: string; code?: string };
 
-export function CreateUserForm({ clinics }: { clinics: ClinicOption[] }) {
+export function CreateUserForm({
+  clinics,
+  preseleccion,
+}: {
+  clinics: ClinicOption[];
+  /** Consultorio ya elegido, cuando se llega desde su detalle. */
+  preseleccion?: string;
+}) {
   const [state, action] = useFormState(createUserAction, initial);
+  // Se muestra el alias que le va a tocar mientras se escribe el nombre.
+  const [nombre, setNombre] = useState("");
+  const [orgId, setOrgId] = useState(preseleccion ?? clinics[0]?.id ?? "");
+  const codigo = clinics.find((c) => c.id === orgId)?.code ?? "";
 
   return (
     <form action={action} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="fullName">Nombre completo</Label>
-          <Input id="fullName" name="fullName" required />
+          <Label htmlFor="fullName">Nombre completo *</Label>
+          <Input id="fullName" name="fullName" required onChange={(e) => setNombre(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">Correo</Label>
@@ -566,8 +508,14 @@ export function CreateUserForm({ clinics }: { clinics: ClinicOption[] }) {
           <Input id="phone" name="phone" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="organizationId">Consultorio</Label>
-          <Select id="organizationId" name="organizationId" required>
+          <Label htmlFor="organizationId">Consultorio *</Label>
+          <Select
+            id="organizationId"
+            name="organizationId"
+            required
+            value={orgId}
+            onChange={(e) => setOrgId(e.target.value)}
+          >
             {clinics.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -584,7 +532,12 @@ export function CreateUserForm({ clinics }: { clinics: ClinicOption[] }) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        El correo debe ser único en toda la plataforma. Respeta el tope de usuarios del plan.
+        Entrará con{" "}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-navy">
+          {codigo && nombre ? suggestUsername(codigo, nombre) : `${codigo.toLowerCase() || "cod"}.nombre`}
+        </code>{" "}
+        o con su correo. El correo debe ser único en toda la plataforma y se respeta
+        el tope de usuarios del plan.
       </p>
 
       <Msg state={state} />

@@ -8,8 +8,8 @@ import { listCartera } from "@/lib/services/platform-billing";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EstadoForm, PlanForm } from "@/components/admin/clinic-forms";
-import { AddUserToClinicForm, SubscribeForm } from "@/components/master/master-forms";
-import { Pencil } from "lucide-react";
+import { SubscribeForm } from "@/components/master/master-forms";
+import { Pencil, Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -226,15 +226,25 @@ export default async function ClinicDetailPage({
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Agregar usuario</CardTitle>
-              <CardDescription>Doctor, administrativo o secretaria de este consultorio.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AddUserToClinicForm organizationId={c.id} clinicCode={c.code} disponibles={c.maxUsers - activos} />
-            </CardContent>
-          </Card>
+          {/* El alta vive en su propia pantalla, igual que en el listado
+              general: un formulario colgado al final de una tabla se pierde de
+              vista y no deja claro que es una accion. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-4 shadow-card">
+            <p className="text-sm text-muted-foreground">
+              {c.maxUsers - activos > 0
+                ? `Quedan ${c.maxUsers - activos} lugar(es) en el plan de este consultorio.`
+                : "Este consultorio ya usó todos los usuarios de su plan."}
+            </p>
+            {c.maxUsers - activos > 0 && (
+              <Link
+                href={`/master/usuarios/nuevo?consultorio=${c.id}`}
+                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Nuevo usuario
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
