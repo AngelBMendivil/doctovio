@@ -9,6 +9,9 @@ import { listInsurers } from "@/lib/services/insurers";
 import { isDentalClinic } from "@/lib/services/clinic-features";
 import { getOdontogramSummary } from "@/lib/services/odontogram";
 import { getQuotesSummary } from "@/lib/services/quotes";
+import { getPendingPreRegForPatient } from "@/lib/services/preregistration";
+import { ensureAppointmentPreRegAction } from "@/lib/actions/preregistration";
+import { SendPreRegButton } from "@/app/(app)/waiting-room/send-prereg-button";
 import { InsuranceSection } from "./insurance-section";
 import { PatientGeneralSection } from "@/app/(app)/consultations/[id]/patient-general-section";
 import { calculateAge } from "@/lib/utils/age";
@@ -33,6 +36,9 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
   // El giro del consultorio decide si este expediente tiene odontograma. Para
   // un consultorio médico, esta pantalla es exactamente la de siempre.
   const dental = await isDentalClinic(session.organizationId);
+
+  const preReg = await getPendingPreRegForPatient(session.organizationId, patient.id);
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   const [timeline, prescriptions, orders, documents, insurers] = await Promise.all([
     getPatientTimeline(session.organizationId, patient.id, { incluirDental: dental }),
@@ -75,6 +81,43 @@ export default async function PatientDetailPage({ params }: { params: { id: stri
               <Badge key={a.id} tone="danger">{a.type}: {a.description}</Badge>
             ))}
           </CardContent>
+        </Card>
+      )}
+
+      {/*
+        PRERREGISTRO PENDIENTE.
+
+        Va aquí porque el expediente es donde se cae buscando a alguien por su
+        nombre, sin tener que saber la fecha de su cita. Antes el único botón
+        para reenviar el enlace vivía en la sala de espera, que va por día: con
+        una cita de la semana que entra había que adivinar a qué fecha navegar.
+      */}
+      {preReg && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-amber-900">Prerregistro pendiente</CardTitle>
+              <p className="text-sm text-amber-800">
+                Cita del {new Date(preReg.startTime).toLocaleDateString("es-MX", { dateStyle: "long" })}
+                {preReg.vencido && " · el enlace anterior venció"}
+              </p>
+            </div>
+            {preReg.token ? (
+              <SendPreRegButton
+                url={`${base}/public/prerregistro/${preReg.token}`}
+                patientName={patient.firstName}
+                phone={patient.phone}
+              />
+            ) : (
+              <form action={ensureAppointmentPreRegAction}>
+                <input type="hidden" name="appointmentId" value={preReg.appointmentId} />
+                <input type="hidden" name="patientId" value={patient.id} />
+                <Button type="submit" size="sm" variant="secondary">
+                  {preReg.vencido ? "Renovar enlace" : "Generar enlace"}
+                </Button>
+              </form>
+            )}
+          </CardHeader>
         </Card>
       )}
 

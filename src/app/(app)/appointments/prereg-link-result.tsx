@@ -77,8 +77,9 @@ export function PreRegLinkResult({
       </details>
 
       <p className="text-xs text-muted-foreground">
-        El enlace deja de funcionar al terminar el día de la consulta. Al abrirlo, el paciente confirma su fecha de
-        nacimiento antes de ver el formulario.
+        El enlace deja de funcionar al terminar el día de la consulta, y nunca antes de 48 horas. Al abrirlo, el
+        paciente confirma su fecha de nacimiento antes de ver el formulario. Si vence, puedes renovarlo desde el
+        expediente del paciente o desde la sala de espera.
       </p>
 
       <Button type="button" variant="ghost" onClick={() => window.location.reload()} className="w-full">

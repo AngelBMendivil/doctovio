@@ -530,3 +530,57 @@ export async function convertPreRegistrationToPatient(
 
   return patient;
 }
+
+/**
+ * ¿Este paciente tiene un prerregistro pendiente de una cita próxima?
+ *
+ * Existe porque el único lugar donde se podía reenviar el enlace era la sala de
+ * espera, que va por fecha: si la cita es de la semana que entra, había que
+ * adivinar el día para llegar al botón. Desde el expediente no hacía falta
+ * saber la fecha, y el expediente es donde se cae buscando a una persona por su
+ * nombre.
+ *
+ * Devuelve null cuando no hay nada que pedirle al paciente: sin cita próxima,
+ * o con el prerregistro ya enviado.
+ */
+export async function getPendingPreRegForPatient(organizationId: string, patientId: string) {
+  const desdeHoy = new Date();
+  desdeHoy.setHours(0, 0, 0, 0);
+
+  const citas = await db.appointment.findMany({
+    where: {
+      organizationId,
+      patientId,
+      isActive: true,
+      status: { notIn: ["CANCELLED", "RESCHEDULED", "COMPLETED", "NO_SHOW"] },
+      startTime: { gte: desdeHoy },
+    },
+    orderBy: { startTime: "asc" },
+    include: {
+      publicFormTokens: { where: { type: "PRE_REGISTRATION" }, orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+
+  for (const cita of citas) {
+    const token = cita.publicFormTokens[0];
+
+    // Ya lo llenó: no hay nada que reenviar.
+    if (token && (token.status === "SUBMITTED" || token.status === "CONVERTED")) continue;
+
+    // Sin token solo aplica a primera vez: a un paciente con expediente
+    // completo no se le pide llenar su historia clínica otra vez.
+    if (!token && cita.type !== "FIRST_TIME") continue;
+
+    const vigente = !!token && token.status !== "REVOKED" && token.expiresAt > new Date();
+
+    return {
+      appointmentId: cita.id,
+      startTime: cita.startTime,
+      token: vigente ? token!.token : null,
+      /** Hubo enlace y ya no sirve: el botón dice "renovar", no "generar". */
+      vencido: !!token && !vigente,
+    };
+  }
+
+  return null;
+}

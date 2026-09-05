@@ -166,7 +166,12 @@ export async function ensureAppointmentPreRegAction(formData: FormData) {
   const appointmentId = String(formData.get("appointmentId") || "");
   if (!appointmentId) throw new Error("Falta la cita.");
   await getOrCreateAppointmentPreRegToken(session.organizationId, appointmentId);
+
   revalidatePath("/waiting-room");
+  // El botón también vive en el expediente. Sin esta línea, ahí se generaba el
+  // enlace pero la tarjeta seguía mostrando el botón: parecía que no pasó nada.
+  const patientId = String(formData.get("patientId") || "");
+  if (patientId) revalidatePath(`/patients/${patientId}`);
 }
 
 /** CONSULTORIO: convierte un prerregistro en expediente y redirige al paciente. */

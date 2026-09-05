@@ -74,6 +74,13 @@ generado a las 19:09 hora local nació vencido dos horas antes, y el paciente
 leyó "el enlace expiró" en el enlace que le acababan de mandar. Para cualquier
 cálculo de "el día", usa `finDelDiaEn()` de `lib/utils/timezone.ts`.
 
+**El enlace de prerregistro se reenvía desde el EXPEDIENTE del paciente**, no
+solo desde la sala de espera. La sala va por día: con una cita de la semana que
+entra había que adivinar a qué fecha navegar para encontrar el botón. Generar
+uno nuevo desde `/preregistrations` NO sirve para esto — ese token no está
+ligado a la cita ni al paciente, y convertirlo crea un expediente duplicado del
+que ya existe.
+
 **Y un enlace nunca puede nacer vencido.** Aun con la zona correcta, agendar de
 tarde una cita del mismo día dejaba minutos de vida. `preRegExpiry()` pone un
 piso de 48 horas. Regla general: toda vigencia derivada de otra fecha necesita

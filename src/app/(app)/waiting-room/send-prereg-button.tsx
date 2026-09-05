@@ -79,7 +79,8 @@ export function SendPreRegButton({
               </a>
             </div>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              El enlace es válido por 7 días. Al completarlo, el estatus del paciente cambia a “prerregistro completo”.
+              El enlace vence al terminar el día de la cita, y nunca antes de 48 horas. Al completarlo, el
+              estatus del paciente cambia a “prerregistro completo”.
             </p>
           </div>
         </div>
