@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { generateSecureToken } from "@/lib/utils/tokens";
+import { finDelDiaEn } from "@/lib/utils/timezone";
 import { logAudit } from "@/lib/services/audit";
 import { getInsurer, linkPatientInsurance } from "@/lib/services/insurers";
 import { createAppointment } from "@/lib/services/appointments";
@@ -17,10 +18,41 @@ const EXPIRY_DAYS = 7;
  * para siempre: si el paciente no lo llenó, recepción le muestra el QR el mismo
  * día y con eso basta.
  */
-function endOfAppointmentDay(startTime: Date): Date {
-  const end = new Date(startTime);
-  end.setHours(23, 59, 59, 999);
-  return end;
+/**
+ * Hasta cuándo vive el enlace de prerregistro de una cita.
+ *
+ * DOS REGLAS, y las dos existen por un fallo real:
+ *
+ * 1. El día de la cita termina EN LA ZONA DEL CONSULTORIO. Antes se calculaba
+ *    con `setHours(23,59,59)`, que usa la zona del servidor — y el servidor de
+ *    Railway corre en UTC. Para un consultorio en Tijuana eso adelanta el
+ *    vencimiento siete horas.
+ *
+ * 2. Un enlace NUNCA puede nacer vencido. Aun con la zona correcta, agendar a
+ *    las siete de la tarde una cita del mismo día dejaba un enlace con minutos
+ *    de vida: el paciente lo abría y leía "el enlace expiró" sin que nadie
+ *    entendiera por qué. El piso de 48 horas garantiza que siempre haya tiempo
+ *    de llenar la historia clínica.
+ *
+ * Que el enlace sobreviva a la cita no estorba: al convertirse en expediente el
+ * token se cierra solo, y mientras tanto el paciente puede terminar de llenarlo
+ * desde su casa.
+ */
+export const MIN_HORAS_PREREGISTRO = 48;
+
+export function preRegExpiry(startTime: Date, timezone: string, ahora = new Date()): Date {
+  const finDelDia = finDelDiaEn(startTime, timezone);
+  const piso = new Date(ahora.getTime() + MIN_HORAS_PREREGISTRO * 60 * 60 * 1000);
+  return finDelDia > piso ? finDelDia : piso;
+}
+
+/** Zona del consultorio. Sin configuración, la del centro del país. */
+async function zonaDelConsultorio(organizationId: string): Promise<string> {
+  const s = await db.organizationSettings.findUnique({
+    where: { organizationId },
+    select: { timezone: true },
+  });
+  return s?.timezone || "America/Mexico_City";
 }
 
 /** Genera el siguiente número de expediente consecutivo por organización. */
@@ -135,7 +167,7 @@ export async function bookFirstTimeIntake(
       type: "PRE_REGISTRATION",
       token,
       status: "GENERATED",
-      expiresAt: endOfAppointmentDay(appointment.startTime),
+      expiresAt: preRegExpiry(appointment.startTime, await zonaDelConsultorio(organizationId)),
       patientId: patient.id,
       appointmentId: appointment.id,
     },
@@ -166,7 +198,7 @@ export async function getOrCreateAppointmentPreRegToken(organizationId: string, 
       type: "PRE_REGISTRATION",
       token,
       status: "GENERATED",
-      expiresAt: endOfAppointmentDay(appt.startTime),
+      expiresAt: preRegExpiry(appt.startTime, await zonaDelConsultorio(organizationId)),
       patientId: appt.patientId,
       appointmentId: appt.id,
     },

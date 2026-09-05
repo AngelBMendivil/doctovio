@@ -21,7 +21,7 @@ contraseña `Demo1234!` para los tres.
 de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
-**Pruebas:** `npm test` — 129 de lógica pura en `tests/unit/`, 3 segundos, sin
+**Pruebas:** `npm test` — 138 de lógica pura en `tests/unit/`, 3 segundos, sin
 tocar la base. `npm run test:integration` — 73 contra la base de PRUEBAS
 (`doctovio_test`), ~70 s porque van por red. Cubren concurrencia y escrituras
 cruzadas entre consultorios, que es lo que no se puede probar de otra forma.
@@ -66,6 +66,18 @@ Next empaqueta los route handlers en la capa RSC y ahí `process.env` viene
 **Las citas se filtran por `startTime`, jamás por `scheduledDate`.**
 `scheduledDate` es solo fecha y se guarda como medianoche UTC: en zonas de
 México desplaza el día y las citas "desaparecen".
+
+**El día termina en la zona del CONSULTORIO, nunca en la del servidor.**
+Railway corre en UTC. `endOfAppointmentDay` usaba `setHours(23,59,59)` y en
+Tijuana eso adelanta el vencimiento siete horas: un enlace de prerregistro
+generado a las 19:09 hora local nació vencido dos horas antes, y el paciente
+leyó "el enlace expiró" en el enlace que le acababan de mandar. Para cualquier
+cálculo de "el día", usa `finDelDiaEn()` de `lib/utils/timezone.ts`.
+
+**Y un enlace nunca puede nacer vencido.** Aun con la zona correcta, agendar de
+tarde una cita del mismo día dejaba minutos de vida. `preRegExpiry()` pone un
+piso de 48 horas. Regla general: toda vigencia derivada de otra fecha necesita
+un piso contra el momento de creación.
 
 **Los botones de WhatsApp se cortan a 20 caracteres.** Si una etiqueta se pasa,
 el paciente la toca, WhatsApp devuelve el texto CORTADO, no coincide con la

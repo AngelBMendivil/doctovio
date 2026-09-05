@@ -65,7 +65,12 @@ export default async function WaitingRoomPage({ searchParams }: { searchParams: 
     const token = a.publicFormTokens[0];
     const preRegDone = !!token && (token.status === "SUBMITTED" || token.status === "CONVERTED");
     const needsPreReg = !!token && !preRegDone;
-    const preRegUrl = token ? `${base}/public/prerregistro/${token.token}` : null;
+    // Un token VENCIDO no sirve para reenviar: el paciente abre el enlace y lee
+    // "el enlace expiró". Antes se mandaba igual y recepción no tenía forma de
+    // renovarlo desde aquí, porque el botón de generar solo aparecía cuando no
+    // existía ningún token.
+    const preRegVivo = !!token && token.status !== "REVOKED" && token.expiresAt > new Date();
+    const preRegUrl = preRegVivo ? `${base}/public/prerregistro/${token.token}` : null;
     return { a, visit, consultation, attended, paid, token, preRegDone, needsPreReg, preRegUrl };
   });
 
@@ -124,7 +129,7 @@ export default async function WaitingRoomPage({ searchParams }: { searchParams: 
             </div>
           )}
 
-          {active.map(({ a, visit, consultation, attended, preRegDone, needsPreReg, preRegUrl }) => {
+          {active.map(({ a, visit, consultation, attended, token, preRegDone, needsPreReg, preRegUrl }) => {
             const hora = new Date(a.startTime).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
             const passBlocked = needsPreReg && !canClinical;
 
@@ -161,7 +166,9 @@ export default async function WaitingRoomPage({ searchParams }: { searchParams: 
                     ) : (
                       <form action={ensureAppointmentPreRegAction}>
                         <input type="hidden" name="appointmentId" value={a.id} />
-                        <Button type="submit" size="sm" variant="secondary">Preparar QR</Button>
+                        <Button type="submit" size="sm" variant="secondary">
+                          {token ? "Renovar enlace" : "Preparar QR"}
+                        </Button>
                       </form>
                     ))}
 
