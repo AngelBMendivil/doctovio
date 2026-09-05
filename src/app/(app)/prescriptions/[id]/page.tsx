@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getPrescriptionForPrint, getOrCreateShareToken } from "@/lib/services/prescriptions";
 import { getLetterhead } from "@/lib/services/letterhead";
+import { getMeasurementsForDocument } from "@/lib/services/vitalSigns";
 import { cancelPrescriptionAction } from "@/lib/actions/prescriptions";
 import { calculateAge } from "@/lib/utils/age";
 import { PrescriptionDocument, type PrescriptionDocProps } from "./prescription-document";
@@ -31,9 +32,15 @@ export default async function PrescriptionPrintPage({
   const rx = await getPrescriptionForPrint(session.organizationId, params.id);
   if (!rx) notFound();
 
-  const [lh, token] = await Promise.all([
+  const [lh, token, medidas] = await Promise.all([
     getLetterhead(session.organizationId, rx.doctorId),
     getOrCreateShareToken(session.organizationId, params.id),
+    // Se acota a la fecha de la receta: al reimprimir una de hace dos años
+    // tiene que decir el peso de entonces, no el de hoy.
+    getMeasurementsForDocument(session.organizationId, rx.patientId, {
+      consultationId: rx.consultationId,
+      hasta: rx.issuedAt ?? rx.date,
+    }),
   ]);
 
   const paperSize: "full" | "half" =
@@ -58,6 +65,8 @@ export default async function PrescriptionPrintPage({
     sexLabel: SEX[rx.patient.sex] ?? "",
     allergies: rx.patient.allergies.map((a) => a.substance).join(", "),
     allergiesNegated: rx.patient.medicalProfile?.allergiesNegated ?? false,
+    weightKg: medidas.weightKg,
+    heightCm: medidas.heightCm,
     diagnosis,
     items: rx.items,
     generalInstructions: rx.instructions ?? "",

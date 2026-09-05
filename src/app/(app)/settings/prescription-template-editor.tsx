@@ -80,6 +80,8 @@ export function PrescriptionTemplateEditor({ initial, preview }: { initial: Temp
     age: 36,
     sexLabel: "Femenino",
     allergies: "Penicilina, Mariscos",
+    weightKg: 68.5,
+    heightCm: 165,
     diagnosis: "Hipertensión arterial (I10)",
     items: [
       { id: "1", medicationName: "Vastionin", activeIngredient: "isotretinoína", presentation: "cápsulas 20 mg", quantityToDispense: "Una caja con 30 cápsulas", dose: "1 cápsula", route: "Oral", frequency: "cada 48 h", duration: "60 días", instructions: "con alimentos" },
@@ -118,6 +120,7 @@ export function PrescriptionTemplateEditor({ initial, preview }: { initial: Temp
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               <Toggle checked={cfg.showDiagnosis} onChange={(v) => setCfg((c) => ({ ...c, showDiagnosis: v }))}>Mostrar diagnóstico</Toggle>
               <Toggle checked={cfg.showAllergies} onChange={(v) => setCfg((c) => ({ ...c, showAllergies: v }))}>Mostrar alergias</Toggle>
+              <Toggle checked={cfg.showVitals} onChange={(v) => setCfg((c) => ({ ...c, showVitals: v }))}>Mostrar talla y peso</Toggle>
             </div>
             <div className="mt-2">
               <Label>Tamaño de hoja</Label>

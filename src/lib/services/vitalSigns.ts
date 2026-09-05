@@ -69,3 +69,53 @@ export async function getLatestVitalSigns(organizationId: string, patientId: str
     orderBy: { recordedAt: "desc" },
   });
 }
+
+/**
+ * TALLA Y PESO PARA UN DOCUMENTO IMPRESO.
+ *
+ * No es lo mismo que "la última toma": una receta reimpresa dos años después
+ * tiene que seguir diciendo lo que se midió ESE día, no el peso de hoy. Por eso
+ * hay dos reglas:
+ *
+ * 1. Si el documento salió de una consulta, mandan los signos de esa consulta.
+ * 2. Lo que falte se completa con la medición previa más reciente —nunca
+ *    posterior a la fecha del documento—, porque la talla casi nunca se vuelve
+ *    a tomar y dejarla en blanco teniéndola es peor.
+ *
+ * Cada campo se busca por separado: una toma con peso pero sin talla es lo
+ * normal en consulta de seguimiento, y usar la fila completa dejaría la talla
+ * vacía teniéndola registrada tres meses antes.
+ */
+export async function getMeasurementsForDocument(
+  organizationId: string,
+  patientId: string,
+  opts: { consultationId?: string | null; hasta?: Date } = {}
+): Promise<{ weightKg: number | null; heightCm: number | null }> {
+  const delConsultorio = { patientId, consultation: { organizationId } };
+
+  const deLaConsulta = opts.consultationId
+    ? await db.vitalSign.findFirst({
+        where: { ...delConsultorio, consultationId: opts.consultationId },
+        orderBy: { recordedAt: "desc" },
+        select: { weightKg: true, heightCm: true },
+      })
+    : null;
+
+  const previo = async (campo: "weightKg" | "heightCm") => {
+    const fila = await db.vitalSign.findFirst({
+      where: {
+        ...delConsultorio,
+        [campo]: { not: null },
+        ...(opts.hasta ? { recordedAt: { lte: opts.hasta } } : {}),
+      },
+      orderBy: { recordedAt: "desc" },
+      select: { weightKg: true, heightCm: true },
+    });
+    return fila?.[campo] ?? null;
+  };
+
+  return {
+    weightKg: deLaConsulta?.weightKg ?? (await previo("weightKg")),
+    heightCm: deLaConsulta?.heightCm ?? (await previo("heightCm")),
+  };
+}

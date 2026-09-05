@@ -22,7 +22,7 @@ de tipos al desplegar; si falla, el despliegue se cae. En local lo ves en 40
 segundos en vez de dar la vuelta completa.
 
 **Pruebas:** `npm test` — 129 de lógica pura en `tests/unit/`, 3 segundos, sin
-tocar la base. `npm run test:integration` — 67 contra la base de PRUEBAS
+tocar la base. `npm run test:integration` — 73 contra la base de PRUEBAS
 (`doctovio_test`), ~70 s porque van por red. Cubren concurrencia y escrituras
 cruzadas entre consultorios, que es lo que no se puede probar de otra forma.
 
@@ -591,6 +591,37 @@ lateral no protege una ruta: la dirección se escribe a mano.
 Todo lo que se elige (pestaña, pieza, dentición, fecha) va en la URL, no en
 `useState`: al guardar, `revalidatePath` remonta el árbol y con estado local el
 dentista perdería la pieza abierta justo después de anotar en ella.
+
+---
+
+## Talla y peso en la receta (4 sep 2026)
+
+La etiqueta se imprime SIEMPRE que la casilla esté encendida, haya dato o no:
+sin valor queda la raya para llenarla a mano. Una etiqueta vacía se ve; una
+ausente, no — y una receta sin peso no se puede dosificar en pediatría ni en
+oncología.
+
+Aplica a **cualquier giro de consultorio** y se apaga en Configuración → Receta
+("Mostrar talla y peso"). Las plantillas ya guardadas no traen el campo, así que
+`resolveTemplate` les pone `true` con el `??`; sin esa línea aparecerían
+apagadas para todos los consultorios existentes.
+
+**De dónde sale el dato** (`getMeasurementsForDocument` en `vitalSigns.ts`):
+
+1. Si la receta salió de una consulta, mandan los signos de ESA consulta.
+2. Lo que falte se completa con la medición previa más reciente, **nunca
+   posterior a la fecha del documento**: reimprimir una receta de hace dos años
+   con el peso de hoy sería falsear un registro clínico.
+3. Cada campo se busca por separado. Una toma de seguimiento suele traer peso
+   sin talla, y usar la fila completa dejaría en blanco una talla que sí está
+   registrada meses atrás.
+
+`VitalSign` no lleva `organizationId`: cuelga de la consulta, y el filtro va por
+esa relación. Probado en `tests/integration/receta-medidas.test.ts`, incluido el
+cruce entre consultorios.
+
+La copia pública de la receta (`/public/receta/[token]`) muestra lo mismo: si
+faltara ahí, serían dos documentos distintos con el mismo folio.
 
 ### 🔴 Orden del despliegue
 

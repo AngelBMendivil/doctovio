@@ -35,6 +35,10 @@ export type PrescriptionDocProps = {
   allergies: string;
   /** El paciente declaró no tener alergias. Distinto de no haber contestado. */
   allergiesNegated?: boolean;
+  /** Peso en kg y talla en cm, de los signos vitales. Nulos si nunca se
+   *  tomaron: la etiqueta se imprime igual, con la raya para llenarla a mano. */
+  weightKg?: number | null;
+  heightCm?: number | null;
   diagnosis: string;
   items: Item[];
   generalInstructions: string;
@@ -98,6 +102,16 @@ export function PrescriptionDocument(p: PrescriptionDocProps) {
         <div>
           Edad: {p.age} años{p.sexLabel ? ` · ${p.sexLabel}` : ""}
         </div>
+        {/* Talla y peso. La etiqueta se imprime SIEMPRE, tenga o no valor: si
+            el dato no está, queda la raya para escribirlo a mano en el
+            consultorio. Una receta sin peso no se puede dosificar en pediatría
+            ni en oncología, y una etiqueta vacía se ve; una ausente, no. */}
+        {cfg.showVitals && (
+          <div>
+            Peso: <Medida valor={p.weightKg} unidad="kg" /> · Talla:{" "}
+            <Medida valor={p.heightCm} unidad="cm" />
+          </div>
+        )}
       </div>
       {/* "Negadas" en gris = el paciente lo declaró. Vacío = nadie preguntó, y
           eso el médico debe notarlo antes de recetar. */}
@@ -147,5 +161,18 @@ export function PrescriptionDocument(p: PrescriptionDocProps) {
 
       <DocumentFooter lh={p.lh} />
     </DocumentPaper>
+  );
+}
+
+/** Una medida del paciente, o la raya para llenarla a mano si no hay registro. */
+function Medida({ valor, unidad }: { valor?: number | null; unidad: string }) {
+  if (valor == null) {
+    return <span className="mx-0.5 inline-block w-14 border-b border-slate-400 align-baseline" />;
+  }
+  // Sin decimales de más: 72 y no 72.0, 168 y no 168.00.
+  return (
+    <span className="font-medium text-slate-800">
+      {Number(valor.toFixed(1))} {unidad}
+    </span>
   );
 }

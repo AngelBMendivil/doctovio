@@ -14,6 +14,9 @@ export type TemplateConfig = {
   };
   showDiagnosis: boolean;
   showAllergies: boolean;
+  /** Talla y peso del paciente. Encendida por omisión, y para cualquier giro
+   *  de consultorio: la dosis de muchos medicamentos depende del peso. */
+  showVitals: boolean;
   paperSize: "full" | "half";
   footer: {
     showPhone: boolean;
@@ -33,6 +36,7 @@ export const DEFAULT_TEMPLATE: TemplateConfig = {
   },
   showDiagnosis: true,
   showAllergies: true,
+  showVitals: true,
   paperSize: "full",
   footer: { showPhone: true, showEmail: true, showWebsite: true, showWhatsapp: false, align: "center", customText: "" },
 };

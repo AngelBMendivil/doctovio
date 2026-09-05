@@ -1,5 +1,6 @@
 import { getPrescriptionByShareToken } from "@/lib/services/prescriptions";
 import { getLetterhead } from "@/lib/services/letterhead";
+import { getMeasurementsForDocument } from "@/lib/services/vitalSigns";
 import { calculateAge } from "@/lib/utils/age";
 import { PrescriptionDocument, type PrescriptionDocProps } from "@/app/(app)/prescriptions/[id]/prescription-document";
 import { PrintButton } from "@/app/(app)/prescriptions/[id]/print-button";
@@ -32,7 +33,16 @@ export default async function PublicPrescriptionPage({
     );
   }
 
-  const lh = await getLetterhead(rx.organizationId, rx.doctorId);
+  // La copia que ve el paciente tiene que ser la MISMA hoja que se imprimió:
+  // si aquí faltara la talla y el peso, serían dos documentos distintos con el
+  // mismo folio.
+  const [lh, medidas] = await Promise.all([
+    getLetterhead(rx.organizationId, rx.doctorId),
+    getMeasurementsForDocument(rx.organizationId, rx.patientId, {
+      consultationId: rx.consultationId,
+      hasta: rx.issuedAt ?? rx.date,
+    }),
+  ]);
 
   const paperSize: "full" | "half" =
     searchParams.size === "half" ? "half" : searchParams.size === "full" ? "full" : lh.cfg.paperSize;
@@ -56,6 +66,8 @@ export default async function PublicPrescriptionPage({
     sexLabel: SEX[rx.patient.sex] ?? "",
     allergies: rx.patient.allergies.map((a) => a.substance).join(", "),
     allergiesNegated: rx.patient.medicalProfile?.allergiesNegated ?? false,
+    weightKg: medidas.weightKg,
+    heightCm: medidas.heightCm,
     diagnosis,
     items: rx.items,
     generalInstructions: rx.instructions ?? "",

@@ -9,6 +9,10 @@ export function resolveTemplate(raw: unknown): TemplateConfig {
     header: { ...DEFAULT_TEMPLATE.header, ...((tmpl.header as object) ?? {}) },
     showDiagnosis: (tmpl.showDiagnosis as boolean) ?? DEFAULT_TEMPLATE.showDiagnosis,
     showAllergies: (tmpl.showAllergies as boolean) ?? DEFAULT_TEMPLATE.showAllergies,
+    // Los consultorios que ya tenían plantilla guardada no traen este campo:
+    // el `??` les da el valor por omisión en vez de dejarlo `undefined`, que
+    // en el documento se leería como "apagado".
+    showVitals: (tmpl.showVitals as boolean) ?? DEFAULT_TEMPLATE.showVitals,
     paperSize: (tmpl.paperSize as "full" | "half") ?? DEFAULT_TEMPLATE.paperSize,
     footer: { ...DEFAULT_TEMPLATE.footer, ...((tmpl.footer as object) ?? {}) },
   };
