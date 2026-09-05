@@ -22,8 +22,17 @@ const STATUS: Record<string, { label: string; tone: "default" | "info" | "succes
 const money = (n: number, currency: string) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(n);
 
-const dateTime = (d: Date) =>
-  new Date(d).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+/** La fecha de una consulta es un INSTANTE REAL, así que se lee en la zona del
+ *  consultorio. Sin la zona se leía en la del servidor —UTC— y una consulta de
+ *  las 9:35 de la noche aparecía como las 4:35 de la mañana del día siguiente. */
+const dateTime = (d: Date, zona: string) =>
+  new Date(d).toLocaleString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: zona,
+  });
 
 export default async function ConsultationsPage({
   searchParams,
@@ -36,7 +45,8 @@ export default async function ConsultationsPage({
   // Por defecto, el día de hoy: la pantalla es de trabajo, no de archivo. El
   // día es el del consultorio; el servidor está en UTC y por la tarde ya cree
   // que es mañana.
-  const today = hoyEnZona(await getClinicTimezone(session.organizationId));
+  const zona = await getClinicTimezone(session.organizationId);
+  const today = hoyEnZona(zona);
   const fromStr = searchParams.from || today;
   const toStr = searchParams.to || today;
   const isToday = fromStr === today && toStr === today;
@@ -62,7 +72,7 @@ export default async function ConsultationsPage({
     const needsPayment = c.status === "COMPLETED" && !c.payment;
     return (
       <tr className="border-b border-border last:border-0 hover:bg-muted/30">
-        <td className="p-3 text-muted-foreground">{dateTime(c.date)}</td>
+        <td className="p-3 text-muted-foreground">{dateTime(c.date, zona)}</td>
         <td className="p-3">
           <Link href={`/patients/${c.patientId}`} className="text-primary hover:underline">
             {c.patient.recordNumber}

@@ -112,3 +112,34 @@ export function hoyEnZona(zona: string, ahora = new Date()): string {
   const { y, m, d } = fechaEnZona(ahora, zona);
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
+
+/**
+ * Fecha y hora de un INSTANTE REAL, en la zona del consultorio.
+ *
+ * Se usa para lo que ocurrió de verdad en un momento dado: cuándo se finalizó
+ * una consulta, cuándo se cobró, cuándo se registró un hallazgo. Esos datos se
+ * guardan bien —son `new Date()` del servidor— pero al imprimirlos sin zona se
+ * leen en la del SERVIDOR, que es UTC: una consulta de las 9:35 de la noche en
+ * Tijuana aparecía como las 4:35 de la mañana del día siguiente.
+ *
+ * OJO con lo que NO va por aquí: la hora de una CITA. Esas se guardan como hora
+ * de pared (lo que se tecleó, interpretado en la zona del servidor), así que
+ * formatearlas en la zona del consultorio las correría. Las dos cosas se
+ * arreglan juntas o ninguna — ver la nota en CLAUDE.md.
+ */
+export function instanteEnZona(
+  fecha: Date | string,
+  zona: string,
+  opciones: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" }
+): string {
+  return new Date(fecha).toLocaleString("es-MX", { ...opciones, timeZone: zona });
+}
+
+/** Solo el día de un instante real, en la zona del consultorio. */
+export function diaEnZona(
+  fecha: Date | string,
+  zona: string,
+  estilo: "short" | "medium" | "long" = "medium"
+): string {
+  return new Date(fecha).toLocaleDateString("es-MX", { dateStyle: estilo, timeZone: zona });
+}

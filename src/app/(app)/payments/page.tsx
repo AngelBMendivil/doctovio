@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
+import { getClinicTimezone } from "@/lib/services/organizations";
+import { instanteEnZona } from "@/lib/utils/timezone";
 import { listPendingPayments } from "@/lib/services/billing";
 import { calculateAge } from "@/lib/utils/age";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +10,10 @@ export default async function PaymentsPage() {
   const session = await getSession();
   if (!session) return null;
 
-  const pending = await listPendingPayments(session.organizationId);
+  const [pending, zona] = await Promise.all([
+    listPendingPayments(session.organizationId),
+    getClinicTimezone(session.organizationId),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -29,7 +34,7 @@ export default async function PaymentsPage() {
                 <p className="font-medium">{c.patient.firstName} {c.patient.lastLastName}</p>
                 <p className="text-xs text-muted-foreground">
                   {calculateAge(c.patient.birthDate)} años · Dr(a). {c.doctor.fullName} ·{" "}
-                  {c.finalizedAt ? new Date(c.finalizedAt).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                  {c.finalizedAt ? instanteEnZona(c.finalizedAt, zona) : "—"}
                 </p>
               </div>
               <Link

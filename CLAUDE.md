@@ -74,6 +74,20 @@ recepción se quedaba sin poder pasar pacientes ni mandar prerregistros en pleno
 turno vespertino. Usa `hoyEnZona(await getClinicTimezone(orgId))`. Estaba en la
 sala de espera, en consultas y en la pantalla de cobro.
 
+**DOS FAMILIAS DE FECHA, y solo una se formatea con zona.**
+
+*Instantes reales* — `new Date()` de cuando algo pasó: `consultation.date`,
+`createdAt`, `finalizedAt`, `recordedAt`, pagos, bitácora. Se guardan bien; hay
+que IMPRIMIRLOS con `timeZone` del consultorio (`instanteEnZona()` /
+`diaEnZona()`). Sin eso se leían en UTC: una consulta de las 9:35 de la noche en
+Tijuana salía como las 4:35 de la mañana del día siguiente.
+
+*Horas de pared* — citas y horarios del médico. Se guardan como lo que se
+tecleó, interpretado en la zona del SERVIDOR (`new Date("2026-09-04T18:00:00")`
+sin huso → 18:00Z), y todo el motor de agenda las compara así. Formatearlas con
+la zona del consultorio las CORRERÍA siete horas. NO se les pone `timeZone`
+hasta arreglar también la escritura y migrar las filas existentes.
+
 **Lo que NO se tocó:** la ventana del día en `listTodayBoard` sigue en la zona
 del servidor, y debe seguir así. Las horas de cita se guardan como si la zona
 del servidor fuera la del consultorio (`new Date("2026-09-04T18:00:00")` sin
