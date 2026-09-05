@@ -87,6 +87,12 @@ generado a las 19:09 hora local nació vencido dos horas antes, y el paciente
 leyó "el enlace expiró" en el enlace que le acababan de mandar. Para cualquier
 cálculo de "el día", usa `finDelDiaEn()` de `lib/utils/timezone.ts`.
 
+**Una cita tiene su propia pantalla** (`/appointments/[id]`): confirmar,
+registrar llegada, reprogramar, cancelar, marcar no asistió y reenviar el
+prerregistro. Antes el renglón de la agenda apuntaba a `/patients/{id}` y te
+sacaba al expediente — la cita no tenía dónde vivir, así que `rescheduleAppointmentAction`
+y `markNoShowAction` llevaban meses escritas y sin usar.
+
 **El enlace de prerregistro se reenvía desde el EXPEDIENTE del paciente**, no
 solo desde la sala de espera. La sala va por día: con una cita de la semana que
 entra había que adivinar a qué fecha navegar para encontrar el botón. Generar

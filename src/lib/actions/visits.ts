@@ -74,6 +74,8 @@ export async function registerArrivalAction(formData: FormData) {
 
   await createVisit(session.organizationId, session.userId, parsed);
   revalidatePath("/waiting-room");
+  // También se registra la llegada desde la pantalla de la cita.
+  revalidatePath(`/appointments/${appointmentId}`);
 }
 
 export async function markVisitLeftAction(visitId: string) {

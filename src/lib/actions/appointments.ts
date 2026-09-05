@@ -52,6 +52,7 @@ export async function confirmAppointmentAction(appointmentId: string) {
   assertPermission(session.role, "MANAGE_APPOINTMENTS");
   await changeAppointmentStatus(session.organizationId, session.userId, appointmentId, "CONFIRMED");
   revalidatePath("/appointments");
+  revalidatePath(`/appointments/${appointmentId}`);
 }
 
 export async function cancelAppointmentAction(formData: FormData) {
@@ -60,6 +61,7 @@ export async function cancelAppointmentAction(formData: FormData) {
   const parsed = cancelAppointmentSchema.parse(Object.fromEntries(formData.entries()));
   await changeAppointmentStatus(session.organizationId, session.userId, parsed.appointmentId, "CANCELLED", parsed.reason);
   revalidatePath("/appointments");
+  revalidatePath(`/appointments/${parsed.appointmentId}`);
 }
 
 export async function markNoShowAction(appointmentId: string) {
@@ -67,12 +69,25 @@ export async function markNoShowAction(appointmentId: string) {
   assertPermission(session.role, "MANAGE_APPOINTMENTS");
   await changeAppointmentStatus(session.organizationId, session.userId, appointmentId, "NO_SHOW");
   revalidatePath("/appointments");
+  revalidatePath(`/appointments/${appointmentId}`);
 }
 
 export async function rescheduleAppointmentAction(formData: FormData) {
   const session = await requireSession();
   assertPermission(session.role, "MANAGE_APPOINTMENTS");
-  const parsed = rescheduleAppointmentSchema.parse(Object.fromEntries(formData.entries()));
+
+  // La hora llega partida en dos desplegables, igual que al agendar. Se arma
+  // aquí para que las dos pantallas manden lo mismo y no haya dos formatos.
+  const scheduledDate = String(formData.get("scheduledDate") || "");
+  const hour = String(formData.get("hour") || "00");
+  const minute = String(formData.get("minute") || "00");
+
+  const parsed = rescheduleAppointmentSchema.parse({
+    ...Object.fromEntries(formData.entries()),
+    startTime: `${scheduledDate}T${hour}:${minute}:00`,
+  });
   await rescheduleAppointment(session.organizationId, session.userId, parsed);
+
   revalidatePath("/appointments");
+  revalidatePath(`/appointments/${parsed.appointmentId}`);
 }

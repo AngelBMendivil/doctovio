@@ -175,3 +175,29 @@ export async function listTodayBoard(organizationId: string, dateStr: string) {
     orderBy: { startTime: "asc" },
   });
 }
+
+/**
+ * Una cita con todo lo que hace falta para operarla desde su pantalla:
+ * paciente, médico, si ya llegó, si ya se atendió y su prerregistro.
+ *
+ * Filtra por consultorio, como todo lo demás: el id viene de la URL y lo elige
+ * quien la escribe.
+ */
+export async function getAppointmentById(organizationId: string, id: string) {
+  return db.appointment.findFirst({
+    where: { id, organizationId },
+    include: {
+      patient: true,
+      doctor: true,
+      visit: { include: { consultation: { include: { payment: true } } } },
+      publicFormTokens: {
+        where: { type: "PRE_REGISTRATION" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      // El historial no tiene relación con User (solo guarda el id), así que
+      // el nombre de quien movió la cita se resuelve aparte si hace falta.
+      statusHistory: { orderBy: { createdAt: "desc" }, take: 10 },
+    },
+  });
+}

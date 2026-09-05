@@ -100,7 +100,7 @@ export default async function AppointmentsPage({
   function Chip({ a }: { a: Appt }) {
     return (
       <Link
-        href={`/patients/${a.patientId}`}
+        href={`/appointments/${a.id}`}
         className="flex items-center gap-1.5 truncate rounded px-1.5 py-0.5 text-[11px] hover:bg-muted"
         title={`${timeOf(new Date(a.startTime))} · ${a.patient.firstName} ${a.patient.lastLastName}`}
       >
@@ -183,7 +183,7 @@ export default async function AppointmentsPage({
                     <div className="space-y-1 p-1.5">
                       {list.length === 0 && <p className="px-1 text-[11px] text-muted-foreground/60">—</p>}
                       {list.map((a) => (
-                        <Link key={a.id} href={`/patients/${a.patientId}`} className="block rounded-md border border-border p-1.5 text-[11px] hover:bg-muted">
+                        <Link key={a.id} href={`/appointments/${a.id}`} className="block rounded-md border border-border p-1.5 text-[11px] hover:bg-muted">
                           <span className="flex items-center gap-1">
                             <span className={`h-1.5 w-1.5 rounded-full ${TYPE_DOT[a.type] ?? "bg-primary"}`} />
                             {timeOf(new Date(a.startTime))}
@@ -210,7 +210,7 @@ export default async function AppointmentsPage({
             {(byDay.get(dateStr) ?? []).map((a) => (
               <Link
                 key={a.id}
-                href={`/patients/${a.patientId}`}
+                href={`/appointments/${a.id}`}
                 className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted"
               >
                 <span className="w-16 shrink-0 text-sm font-medium">{timeOf(new Date(a.startTime))}</span>
