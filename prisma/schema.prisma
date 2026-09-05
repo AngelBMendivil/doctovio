@@ -450,6 +450,7 @@ model Organization {
   reminderJobs       ReminderJob[]
   whatsappConnections WhatsappConnection[]
   clinicPayments     ClinicPayment[]
+  odontogramEntries  OdontogramEntry[]
   subscriptions      Subscription[]
   billingCycles      BillingCycle[]
   clinicUsers        ClinicUser[]
@@ -787,6 +788,7 @@ model User {
   @@unique([organizationId, email])
   @@index([organizationId])
   @@map("users")
+  odontogramEntries     OdontogramEntry[]
 }
 
 model Role {
@@ -940,6 +942,7 @@ model Patient {
   @@index([organizationId, phone])
   @@index([organizationId, curp])
   @@map("patients")
+  odontogramEntries     OdontogramEntry[]
 }
 
 model PatientResponsibleContact {
@@ -1655,6 +1658,7 @@ model Consultation {
   @@index([organizationId, patientId])
   @@index([organizationId, doctorId, date])
   @@map("consultations")
+  odontogramEntries OdontogramEntry[]
 }
 
 model ConsultationNote {
@@ -2040,6 +2044,97 @@ model PublicFormToken {
 // ============================================================================
 // AUDITORÍA
 // ============================================================================
+
+// ---------------------------------------------------------------------------
+// ODONTOGRAMA — solo para consultorios con `type = DENTAL`
+// ---------------------------------------------------------------------------
+
+/// Superficie del diente. Un hallazgo o tratamiento casi nunca aplica al diente
+/// completo: una caries en mesial se trata distinto que una en oclusal, y
+/// registrar solo "el 26 tiene caries" pierde lo que el dentista necesita.
+///
+/// OCCLUSAL_INCISAL es una sola cara con dos nombres según la pieza: oclusal en
+/// premolares y molares, incisal en incisivos y caninos. Es la misma superficie
+/// anatómica, así que se guarda igual y la interfaz la nombra según el diente.
+///
+/// PALATAL_LINGUAL, lo mismo: palatina arriba, lingual abajo.
+enum ToothSurface {
+  VESTIBULAR
+  PALATAL_LINGUAL
+  MESIAL
+  DISTAL
+  OCCLUSAL_INCISAL
+  /// El diente entero: ausencia, extracción, implante, movilidad.
+  WHOLE
+}
+
+/// Qué se está anotando.
+enum OdontogramEntryKind {
+  /// Lo que se encontró: caries, fractura, ausente.
+  FINDING
+  /// Lo que se hizo o se va a hacer: resina, corona, endodoncia.
+  TREATMENT
+}
+
+enum OdontogramEntryStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Una anotación sobre un diente. El odontograma completo es la suma de todas.
+///
+/// ES UNA BITÁCORA, no una foto del estado actual. Cada hallazgo y cada
+/// tratamiento queda como una fila con su fecha, y el dibujo que ve el dentista
+/// se DERIVA de ellas.
+///
+/// Guardar en cambio "el estado actual del diente 26" y sobrescribirlo obligaría
+/// a llevar la historia en otra tabla, con el riesgo permanente de que las dos
+/// se desincronicen. Además perdería lo más útil: qué se le ha hecho a esa pieza
+/// y en qué orden.
+model OdontogramEntry {
+  id             String                @id @default(cuid())
+  organizationId String                @map("organization_id")
+  patientId      String                @map("patient_id")
+
+  /// Notación FDI (ISO 3950), la que se usa en México: cuadrante + pieza.
+  /// 11-18, 21-28, 31-38, 41-48 permanentes · 51-55, 61-65, 71-75, 81-85
+  /// temporales. Se guarda como texto de dos dígitos, no como número: "07" y
+  /// 7 no son lo mismo y el cero a la izquierda importa al ordenar.
+  toothCode      String                @map("tooth_code")
+
+  /// Superficies afectadas. Varias a la vez es lo normal: una caries que abarca
+  /// oclusal y mesial se registra como una sola anotación con las dos.
+  surfaces       ToothSurface[]
+
+  kind           OdontogramEntryKind
+  /// Código del catálogo (CARIES, RESINA, CORONA…). Ver lib/constants/odontograma.ts
+  code           String
+  status         OdontogramEntryStatus @default(COMPLETED)
+
+  notes          String?
+  /// Consulta en la que se registró, cuando viene de una.
+  consultationId String?               @map("consultation_id")
+  /// Quién lo anotó. Es historia clínica: siempre hay un responsable.
+  doctorId       String                @map("doctor_id")
+
+  /// Cuándo ocurrió, que no siempre es cuándo se capturó.
+  recordedAt     DateTime              @default(now()) @map("recorded_at")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  consultation Consultation? @relation(fields: [consultationId], references: [id])
+  doctor       User          @relation(fields: [doctorId], references: [id])
+
+  /// La consulta más común: todo el odontograma de un paciente.
+  @@index([organizationId, patientId])
+  /// Y la segunda: la historia de UNA pieza.
+  @@index([patientId, toothCode, recordedAt])
+  @@map("odontogram_entries")
+}
 
 model AuditLog {
   id             String      @id @default(cuid())
