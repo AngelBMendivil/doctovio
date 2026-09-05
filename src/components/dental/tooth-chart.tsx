@@ -70,11 +70,13 @@ function Tooth({
   code,
   estado,
   seleccionado,
+  soloLectura,
   onSelect,
 }: {
   code: string;
   estado?: ChartTooth;
   seleccionado: boolean;
+  soloLectura?: boolean;
   onSelect: (code: string) => void;
 }) {
   const caras = mapaDeCaras(code);
@@ -104,16 +106,21 @@ function Tooth({
         ? LAYERS[aro.layer].letra
         : null;
 
+  // En la hoja impresa el diente no es un botón: es un dibujo. Se reutiliza el
+  // MISMO componente para no acabar con dos versiones del diagrama que puedan
+  // pintar cosas distintas.
+  const Contenedor = soloLectura ? "div" : "button";
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(code)}
+    <Contenedor
+      {...(soloLectura
+        ? {}
+        : { type: "button" as const, onClick: () => onSelect(code), "aria-pressed": seleccionado })}
       aria-label={`Pieza ${code}, ${toothName(code)}. ${resumen}`}
-      aria-pressed={seleccionado}
       title={`${code} · ${toothName(code)}\n${resumen}`}
       className={cn(
         "group flex flex-col items-center rounded-md px-0.5 py-1 transition-colors",
-        seleccionado ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted"
+        soloLectura ? "" : seleccionado ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted"
       )}
     >
       <span className="mb-0.5 text-[10px] font-semibold leading-none text-muted-foreground">{code}</span>
@@ -158,7 +165,7 @@ function Tooth({
 
       {/* La letra dice lo mismo que el color, para quien no lo distingue. */}
       <span className="mt-1 h-3 text-[9px] font-bold leading-none text-muted-foreground">{letra ?? ""}</span>
-    </button>
+    </Contenedor>
   );
 }
 
@@ -166,11 +173,13 @@ function Fila({
   piezas,
   estados,
   seleccionado,
+  soloLectura,
   onSelect,
 }: {
   piezas: readonly (readonly number[])[];
   estados: Record<string, ChartTooth>;
   seleccionado: string | null;
+  soloLectura?: boolean;
   onSelect: (c: string) => void;
 }) {
   return (
@@ -186,6 +195,7 @@ function Fila({
                 code={code}
                 estado={estados[code]}
                 seleccionado={seleccionado === code}
+                soloLectura={soloLectura}
                 onSelect={onSelect}
               />
             );
@@ -200,10 +210,13 @@ export function ToothChart({
   dentition,
   estados,
   seleccionado,
+  soloLectura = false,
 }: {
   dentition: Dentition;
   estados: Record<string, ChartTooth>;
   seleccionado: string | null;
+  /** Para la hoja impresa: se dibuja igual, pero no se puede tocar. */
+  soloLectura?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -228,6 +241,7 @@ export function ToothChart({
             piezas={[q.upperRight, q.upperLeft]}
             estados={estados}
             seleccionado={seleccionado}
+            soloLectura={soloLectura}
             onSelect={select}
           />
           <div className="h-px bg-border" />
@@ -235,6 +249,7 @@ export function ToothChart({
             piezas={[q.lowerRight, q.lowerLeft]}
             estados={estados}
             seleccionado={seleccionado}
+            soloLectura={soloLectura}
             onSelect={select}
           />
         </div>

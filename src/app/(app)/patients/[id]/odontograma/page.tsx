@@ -133,7 +133,15 @@ export default async function OdontogramaPage({
                 : `${resumen.piezasAnotadas} pieza(s) con registro · ${resumen.pendientes} tratamiento(s) por hacer`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/patients/${patient.id}/odontograma/imprimir${
+                dentition === "DECIDUOUS" ? "?denticion=DECIDUOUS" : ""
+              }`}
+              className="inline-flex h-9 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-muted"
+            >
+              Imprimir
+            </Link>
             <Selector
               opciones={[
                 { href: qs({ denticion: undefined }), label: "Permanente", activo: dentition === "PERMANENT" },

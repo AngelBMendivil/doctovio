@@ -131,6 +131,12 @@ export default async function ConsultationDetailPage({
                   Ver dentición {dentition === "PERMANENT" ? "temporal" : "permanente"}
                 </Link>
                 <Link
+                  href={`/patients/${consultation.patientId}/odontograma/imprimir?consulta=${consultation.id}`}
+                  className="text-primary hover:underline"
+                >
+                  Imprimir
+                </Link>
+                <Link
                   href={`/patients/${consultation.patientId}/odontograma`}
                   className="text-primary hover:underline"
                 >
