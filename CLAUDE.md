@@ -259,6 +259,10 @@ o el middleware lo manda al login con un 307.
 - **Multiconsultorio: funcionando.** Aislamiento verificado con dos
   consultorios reales. Falta RLS en Postgres como segunda capa
   (ver `MULTITENANT.md` §7) y los índices compuestos para cuando haya volumen.
+- **🔴 Zonas horarias: bloquea WhatsApp y Google Calendar.** La hora de las
+  citas se guarda corrida por el desfase del servidor. Los recordatorios salen
+  a destiempo y el evento de Google cae a otra hora. Plan completo al final de
+  este archivo, en "EN EL TINTERO".
 - **Un paciente nuevo no puede agendar por WhatsApp** — escala a recepción.
 - **Verificación de negocio en Meta** pendiente: sin ella no hay número real.
 - **Rotación de credenciales: DECIDIDO NO HACERLA** (30 ago 2026). Se planteó
@@ -692,6 +696,81 @@ Pendientes de aplicar en producción: `20260904120000_odontograma` y
 `20260904160000_modulo_dental`. Ambas ya están aplicadas en `doctovio_test`.
 
 ---
+
+---
+
+## 🔴 EN EL TINTERO — Zonas horarias: bloquea WhatsApp y Google Calendar
+
+**Esto se retoma ANTES de terminar los recordatorios de WhatsApp y la sincronía
+con Google Calendar.** No es un pendiente cosmético: es la razón por la que esos
+dos no pueden darse por concluidos.
+
+### El problema, en una línea
+
+La hora de una cita se guarda como **hora de pared interpretada en la zona del
+SERVIDOR**. `new Date("2026-09-04T18:00:00")` sin huso, sobre Railway (UTC), da
+`18:00Z`. Si el consultorio está en Tijuana, la cita real es `01:00Z` del día
+siguiente: el instante guardado está **siete horas antes** de la realidad.
+
+Dentro de Doctovio no se nota, porque TODO usa el mismo error: el motor arma los
+horarios igual (`dayStart.getDay()`, `startAt.getHours()`), y la pantalla los
+imprime sin zona. Hora de pared contra hora de pared, siempre cuadra.
+
+Se nota en cuanto algo sale al mundo real:
+
+| Qué | Qué pasa hoy |
+|---|---|
+| Recordatorio de WhatsApp | `sendAt = startTime − N horas` (`reminders.ts:72`). Con el instante corrido, un aviso de "24 horas antes" sale 31 horas antes. |
+| Texto del recordatorio | `fullDate`/`fullTime` formatean SIN zona, o sea en UTC — y por eso hoy dicen "18:00", que es lo correcto **por accidente**. Arreglar el guardado sin arreglar esto rompe el mensaje. |
+| Google Calendar | `calendar-sync.ts` manda `startAt.toISOString()`. La cita aparece en el teléfono del médico a las 11:00 en vez de las 18:00. |
+
+### Requisito previo (es del usuario, no del código)
+
+**La zona configurada de cada consultorio tiene que ser la correcta antes de
+migrar.** Hoy `[TRI]` (Dra. Mendívil) dice `America/Mexico_City` y atiende en
+Tijuana; `[DTS]` sí tiene `America/Tijuana`. Migrar con el dato equivocado deja
+sus citas corridas una hora — mal de otra forma. Se corrige en
+Configuración → General → Zona horaria.
+
+### Las tres piezas van JUNTAS
+
+Cambiar una sola empeora las cosas. En orden:
+
+1. **Escritura.** `createAppointmentAction`, `bookFirstTimeAction` y
+   `rescheduleAppointmentAction` arman `startTime` con
+   `` `${fecha}T${hora}:${minuto}:00` ``. Debe construirse el instante a partir
+   de la hora de pared EN LA ZONA DEL CONSULTORIO. La maquinaria ya existe en
+   `lib/utils/timezone.ts` (`instanteDeParedEn`, hoy privada: exponerla).
+2. **Motor de agenda.** `scheduling.ts` arma el día con
+   `new Date(\`${dateStr}T00:00:00\`)` y filtra con `dayStart.getDay()` y
+   `startAt.getHours()`. Todo eso pasa a calcularse en la zona del consultorio.
+   Lo mismo la ventana de `listTodayBoard`.
+3. **Lectura.** Las citas se imprimen con `timeZone` de la clínica — incluidos
+   `fullDate`/`fullTime` de los recordatorios y la agenda.
+
+### Migración de lo ya guardado
+
+Cada cita existente hay que correrla: el instante nuevo es la hora de pared que
+se tecleó, reinterpretada en la zona de su consultorio. Son pocas filas (fase
+friends and family), pero **hay que respaldar antes** y verificar cita por cita
+contra lo que el médico recuerda haber agendado. Afecta `appointments.startTime`
+y `appointment_holds`; `scheduledDate` es solo fecha y se recalcula.
+
+### Cómo saber que quedó
+
+- Una cita agendada a las 18:00 en Tijuana se guarda como `01:00Z` del día
+  siguiente, se sigue viendo "18:00" en la agenda, y el recordatorio de 24 h
+  sale exactamente 24 horas antes.
+- El evento de Google Calendar cae a las 18:00 en el teléfono del médico.
+- Un consultorio en la Ciudad de México y otro en Tijuana, con citas a la misma
+  hora de pared, guardan instantes distintos.
+
+### Lo que YA está resuelto (no rehacer)
+
+- `hoyEnZona()` — qué día es hoy para el consultorio.
+- `finDelDiaEn()` — cuándo termina su día (vigencia del prerregistro).
+- `instanteEnZona()` / `diaEnZona()` — impresión de instantes REALES
+  (consulta finalizada, cobro, bitácora). Esos se guardan bien; solo se leían mal.
 
 ## Cómo trabajar aquí
 
