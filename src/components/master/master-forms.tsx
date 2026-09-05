@@ -11,9 +11,6 @@ import {
   registerCyclePaymentAction,
   waiveCycleAction,
   createUserAction,
-  setUserActiveAction,
-  changeUserRoleAction,
-  moveUserAction,
   type MasterState,
 } from "@/lib/actions/master";
 import { Button } from "@/components/ui/button";
@@ -593,60 +590,5 @@ export function CreateUserForm({ clinics }: { clinics: ClinicOption[] }) {
       <Msg state={state} />
       <Submit>Crear usuario</Submit>
     </form>
-  );
-}
-
-export function UserRowActions({
-  userId,
-  isActive,
-  role,
-  organizationId,
-  clinics,
-}: {
-  userId: string;
-  isActive: boolean;
-  role: string;
-  organizationId: string;
-  clinics: ClinicOption[];
-}) {
-  const [estado, accionEstado] = useFormState(setUserActiveAction, initial);
-  const [, accionRol] = useFormState(changeUserRoleAction, initial);
-  const [, accionMover] = useFormState(moveUserAction, initial);
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <form action={accionRol}>
-        <input type="hidden" name="userId" value={userId} />
-        <Select name="role" defaultValue={role} className="h-9 w-36 text-[13px]" onChange={(e) => e.currentTarget.form?.requestSubmit()}>
-          <option value="DOCTOR">Doctor</option>
-          <option value="ADMIN">Administrativo</option>
-          <option value="ASSISTANT">Secretaria</option>
-        </Select>
-      </form>
-
-      {clinics.length > 1 && (
-        <form action={accionMover}>
-          <input type="hidden" name="userId" value={userId} />
-          <Select
-            name="organizationId"
-            defaultValue={organizationId}
-            className="h-9 w-40 text-[13px]"
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          >
-            {clinics.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
-        </form>
-      )}
-
-      <form action={accionEstado}>
-        <input type="hidden" name="userId" value={userId} />
-        <input type="hidden" name="active" value={isActive ? "false" : "true"} />
-        <Submit variant="ghost" size="sm">{isActive ? "Desactivar" : "Reactivar"}</Submit>
-      </form>
-
-      {estado.error && <span className="text-xs text-destructive">{estado.error}</span>}
-    </div>
   );
 }

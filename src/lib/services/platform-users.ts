@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { suggestUsername, resolveUsername } from "@/lib/utils/clinic-code";
-import type { Prisma, UserRoleName, UserStatus } from "@prisma/client";
+import type { Prisma, UserRoleName } from "@prisma/client";
 
 /**
  * USUARIOS VISTOS DESDE LA PLATAFORMA.
@@ -13,16 +13,26 @@ import type { Prisma, UserRoleName, UserStatus } from "@prisma/client";
  * citas que creó, las recetas que firmó y su rastro en la bitácora.
  */
 
-export async function listAllUsers(filter: { organizationId?: string; role?: UserRoleName; status?: UserStatus; search?: string } = {}) {
+export async function listAllUsers(
+  filter: {
+    organizationId?: string;
+    role?: UserRoleName;
+    /** true = solo activos, false = solo inactivos, undefined = todos. */
+    isActive?: boolean;
+    search?: string;
+  } = {}
+) {
   const where: Prisma.UserWhereInput = {
     organizationId: filter.organizationId,
     primaryRole: filter.role,
-    status: filter.status,
+    isActive: filter.isActive,
     ...(filter.search
       ? {
           OR: [
             { fullName: { contains: filter.search, mode: "insensitive" } },
             { email: { contains: filter.search, mode: "insensitive" } },
+            // También por alias: es lo que la gente del consultorio recuerda.
+            { username: { contains: filter.search, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -137,6 +147,93 @@ export async function createUserAsMaster(params: {
     });
 
     return user;
+  });
+}
+
+/**
+ * Edición completa de un usuario desde el panel Master.
+ *
+ * Un solo guardado explícito en vez de acciones sueltas. La versión anterior
+ * tenía un `select` por columna que disparaba la mutación al cambiar: rozar la
+ * rueda del mouse sobre él reasignaba el rol de alguien, o lo movía de
+ * consultorio, sin confirmación y sin que nadie se enterara.
+ *
+ * El correo NO se edita: es la identidad de acceso y es único en toda la
+ * plataforma. Cambiarlo es dar de alta a otra persona, no corregir un dato.
+ */
+export async function updateUserAsMaster(
+  userId: string,
+  data: {
+    fullName: string;
+    phone?: string | null;
+    role: UserRoleName;
+    organizationId: string;
+    isActive: boolean;
+  }
+) {
+  const actual = await db.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { organizationId: true, isPlatformAdmin: true },
+  });
+
+  const cambiaDeConsultorio = actual.organizationId !== data.organizationId;
+
+  if (cambiaDeConsultorio) {
+    const destino = await db.organization.findUniqueOrThrow({
+      where: { id: data.organizationId },
+      select: { name: true, maxUsers: true, _count: { select: { users: true } } },
+    });
+    if (destino._count.users >= destino.maxUsers) {
+      throw new Error(`"${destino.name}" ya llegó al tope de ${destino.maxUsers} usuarios de su plan.`);
+    }
+  }
+
+  if (!data.fullName.trim()) throw new Error("El nombre es obligatorio.");
+
+  return db.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: {
+        fullName: data.fullName.trim(),
+        phone: data.phone?.trim() || null,
+        primaryRole: data.role,
+        organizationId: data.organizationId,
+        isActive: data.isActive,
+        status: data.isActive ? "ACTIVE" : "INACTIVE",
+      },
+      select: { id: true, fullName: true, organizationId: true },
+    });
+
+    if (cambiaDeConsultorio) {
+      // El historial se queda donde estaba: las citas que creó y las recetas
+      // que firmó pertenecen al consultorio anterior. Reasignarlas reescribiría
+      // el expediente clínico.
+      await tx.clinicUser.updateMany({ where: { userId }, data: { isPrimary: false } });
+      await tx.clinicUser.upsert({
+        where: { organizationId_userId: { organizationId: data.organizationId, userId } },
+        create: { organizationId: data.organizationId, userId, role: data.role, isPrimary: true },
+        update: { isPrimary: true, role: data.role, status: data.isActive ? "ACTIVE" : "INACTIVE" },
+      });
+    } else {
+      await tx.clinicUser.updateMany({
+        where: { userId },
+        data: { role: data.role, status: data.isActive ? "ACTIVE" : "INACTIVE" },
+      });
+    }
+
+    return user;
+  });
+}
+
+/** Un usuario con todo lo necesario para editarlo. */
+export async function getUserForEdit(userId: string) {
+  return db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true, fullName: true, email: true, username: true, phone: true,
+      primaryRole: true, isActive: true, isPlatformAdmin: true, lastLoginAt: true, createdAt: true,
+      organization: { select: { id: true, name: true, code: true } },
+    },
   });
 }
 

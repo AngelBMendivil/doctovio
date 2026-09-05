@@ -6,7 +6,7 @@ import { requirePlatformAdmin } from "@/lib/auth/session";
 import { createClinic, setClinicStatus, updateClinicPlan } from "@/lib/services/clinics";
 import { createProduct, updateProduct, subscribeClinic } from "@/lib/services/platform-catalog";
 import { generateBillingCycles, registerCyclePayment, waiveCycle } from "@/lib/services/platform-billing";
-import { createUserAsMaster, setUserActive, changeUserRole, moveUserToClinic } from "@/lib/services/platform-users";
+import { createUserAsMaster, setUserActive, changeUserRole, moveUserToClinic, updateUserAsMaster } from "@/lib/services/platform-users";
 import { resetUserPasswordGlobal } from "@/lib/services/users";
 import { logPlatform } from "@/lib/services/platform-audit";
 import type { BillingFrequency, ClinicStatus, PaymentMethod, UserRoleName } from "@prisma/client";
@@ -312,6 +312,41 @@ export async function createUserAction(_p: MasterState, f: FormData): Promise<Ma
 
     return `${u.fullName} dado de alta.`;
   }, ["/master/usuarios", "/master/consultorios"]);
+}
+
+/**
+ * Guarda todos los cambios de un usuario de una sola vez.
+ *
+ * Reemplaza a los desplegables que mutaban al cambiar. Un guardado explícito
+ * deja claro qué se está modificando y permite revisar antes de aplicar.
+ */
+export async function updateUserAction(_p: MasterState, f: FormData): Promise<MasterState> {
+  return run(async (masterUserId) => {
+    const userId = str(f.get("userId"));
+    if (!userId) throw new Error("Falta el usuario.");
+
+    const organizationId = str(f.get("organizationId"));
+    const isActive = f.get("isActive") === "on";
+
+    const u = await updateUserAsMaster(userId, {
+      fullName: str(f.get("fullName")),
+      phone: str(f.get("phone")) || null,
+      role: str(f.get("role")) as UserRoleName,
+      organizationId,
+      isActive,
+    });
+
+    await logPlatform({
+      masterUserId,
+      action: "UPDATE",
+      entity: "clinic_user",
+      entityId: u.id,
+      organizationId: u.organizationId,
+      metadata: { rol: str(f.get("role")), activo: isActive },
+    });
+
+    return `${u.fullName} actualizado.`;
+  }, ["/master/usuarios", `/master/usuarios/${str(f.get("userId"))}`, "/master/consultorios"]);
 }
 
 export async function setUserActiveAction(_p: MasterState, f: FormData): Promise<MasterState> {

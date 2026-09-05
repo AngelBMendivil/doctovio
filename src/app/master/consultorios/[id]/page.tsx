@@ -8,7 +8,8 @@ import { listCartera } from "@/lib/services/platform-billing";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EstadoForm, PlanForm } from "@/components/admin/clinic-forms";
-import { AddUserToClinicForm, UserRowActions, SubscribeForm } from "@/components/master/master-forms";
+import { AddUserToClinicForm, SubscribeForm } from "@/components/master/master-forms";
+import { Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -208,13 +209,15 @@ export default async function ClinicDetailPage({
                         {u.lastLoginAt ? fecha(u.lastLoginAt) : "Nunca"}
                       </td>
                       <td className="px-4 py-3">
-                        <UserRowActions
-                          userId={u.id}
-                          isActive={u.isActive}
-                          role={u.primaryRole}
-                          organizationId={c.id}
-                          clinics={[{ id: c.id, name: c.name }]}
-                        />
+                        {/* Editar abre su pantalla, con guardado explícito. Antes
+                            había desplegables que mutaban al cambiar. */}
+                        <Link
+                          href={`/master/usuarios/${u.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden />
+                          Editar
+                        </Link>
                       </td>
                     </tr>
                   ))}
